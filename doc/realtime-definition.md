@@ -293,6 +293,22 @@ src/app/room/[id]/lobby/_components/LobbyRealtime.tsx
 src/actions/room.ts
 ```
 
+If players only appear after refreshing, the lobby probably missed the `players` INSERT event or the browser could not read that event through RLS. The lobby now uses two layers:
+
+```text
+Fast path:
+  Supabase Realtime receives players INSERT/DELETE
+  -> LobbyRealtime patches local player state immediately
+
+Recovery path:
+  LobbyRealtime calls /api/rooms/[id]/lobby-state every 2 seconds
+  -> API route verifies the user is host or room member
+  -> API route returns the latest players using the server admin client
+  -> LobbyRealtime replaces the local player list without a browser refresh
+```
+
+This keeps the UI live even if one realtime event is missed.
+
 ### Random country draw
 
 Goal:
@@ -323,6 +339,15 @@ Host clicks Start Draw
 ```
 
 That is a valid realtime flow because non-host players do not refresh manually. They are pushed from lobby to draw by the `rooms` realtime event.
+
+If a player stays on "Waiting for the host to start the draw..." until they manually refresh, the browser probably missed the `rooms` UPDATE event. Common reasons:
+
+- the `rooms` table was not added to the `supabase_realtime` publication in the live Supabase project
+- the browser's channel was not fully subscribed yet when the host clicked Start Draw
+- RLS allows the page's initial server read, but the client session cannot receive realtime rows
+- the browser lost the WebSocket connection and did not receive that one event
+
+Realtime events are not a replacement for checking the current state. A good lobby should both subscribe to `rooms` updates and occasionally re-check `rooms.status`. This project now does that in `LobbyRealtime`: Realtime is the fast path, and a small status check is the recovery path.
 
 If you also want the draw page itself to update while already open, add a subscription to `players` UPDATE events filtered by `room_id`.
 

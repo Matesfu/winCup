@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Divider } from "@/components/ui/Divider";
 import { CountryChip } from "@/components/ui/CountryChip";
@@ -26,6 +26,11 @@ interface LobbyRealtimeProps {
   isHost: boolean;
 }
 
+interface LobbyStateResponse {
+  room: Pick<RoomPublic, "status">;
+  players: Player[];
+}
+
 export function LobbyRealtime({
   roomId,
   initialRoom,
@@ -38,21 +43,101 @@ export function LobbyRealtime({
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [room, setRoom] = useState<RoomPublic>(initialRoom);
   // Track which player IDs are new (to animate entrance)
-  const newPlayerIds = useRef<Set<string>>(new Set());
+  const [newPlayerIds, setNewPlayerIds] = useState<Set<string>>(() => new Set());
+  const hasRedirectedRef = useRef(false);
+  const knownPlayerIdsRef = useRef<Set<string>>(
+    new Set(initialPlayers.map((player) => player.id))
+  );
 
   const totalSlots = initialCountries.length;
   const isReady = players.length >= totalSlots && totalSlots > 0;
 
+  const redirectForStatus = useCallback(
+    (status: RoomPublic["status"]) => {
+      if (hasRedirectedRef.current) return;
+
+      const nextPath =
+        status === "drawn"
+          ? `/room/${roomId}/draw`
+          : status === "group_stage"
+            ? `/room/${roomId}/group-stage`
+            : status === "knockout"
+              ? `/room/${roomId}/ladder`
+              : status === "finished"
+                ? `/room/${roomId}/winner`
+                : null;
+
+      if (!nextPath) return;
+
+      hasRedirectedRef.current = true;
+      router.push(nextPath);
+    },
+    [roomId, router]
+  );
+
+  const markNewPlayers = useCallback((playerIds: string[]) => {
+    if (playerIds.length === 0) return;
+
+    setNewPlayerIds((previousIds) => {
+      const nextIds = new Set(previousIds);
+      playerIds.forEach((playerId) => nextIds.add(playerId));
+      return nextIds;
+    });
+  }, []);
+
+  const syncLobbyState = useCallback(async (signal?: AbortSignal) => {
+    if (hasRedirectedRef.current) return;
+
+    const response = await fetch(`/api/rooms/${roomId}/lobby-state`, {
+      cache: "no-store",
+      signal,
+    });
+
+    if (signal?.aborted) return;
+
+    if (response.status === 403 || response.status === 404) {
+      router.push("/room/join");
+      return;
+    }
+
+    if (!response.ok) return;
+
+    const data = (await response.json()) as LobbyStateResponse;
+
+    if (signal?.aborted) return;
+
+    if (data.room?.status) {
+      setRoom((previousRoom) => ({ ...previousRoom, status: data.room.status }));
+      redirectForStatus(data.room.status);
+    }
+
+    if (!Array.isArray(data.players)) return;
+
+    const incomingPlayerIds = new Set(data.players.map((player) => player.id));
+    const newPlayerIdsFromSnapshot = data.players
+      .filter((player) => !knownPlayerIdsRef.current.has(player.id))
+      .map((player) => player.id);
+
+    knownPlayerIdsRef.current = incomingPlayerIds;
+    markNewPlayers(newPlayerIdsFromSnapshot);
+    setPlayers(data.players);
+  }, [roomId, router, redirectForStatus, markNewPlayers]);
+
   useEffect(() => {
     const unsubscribe = subscribeLobby(roomId, {
       onPlayerJoined(player) {
+        const isNewPlayer = !knownPlayerIdsRef.current.has(player.id);
+        knownPlayerIdsRef.current.add(player.id);
+
         setPlayers((prev) => {
           if (prev.some((p) => p.id === player.id)) return prev;
-          newPlayerIds.current.add(player.id);
           return [...prev, player];
         });
+        if (isNewPlayer) markNewPlayers([player.id]);
       },
       onPlayerRemoved(playerId) {
+        knownPlayerIdsRef.current.delete(playerId);
+
         // Remove from the list when the host kicks someone.
         // If the kicked player is viewing this lobby, redirect them to the join page.
         setPlayers((prev) => {
@@ -67,15 +152,33 @@ export function LobbyRealtime({
       onRoomUpdated(updated) {
         if (updated.status) {
           setRoom((prev) => ({ ...prev, ...updated } as RoomPublic));
-          if (updated.status === "drawn") {
-            router.push(`/room/${roomId}/draw`);
-          }
+          redirectForStatus(updated.status as RoomPublic["status"]);
         }
       },
     });
 
     return unsubscribe;
-  }, [roomId, router, currentUserId]);
+  }, [roomId, router, currentUserId, redirectForStatus, markNewPlayers]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+
+    const safeSyncLobbyState = () => {
+      void syncLobbyState(abortController.signal).catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+      });
+    };
+
+    safeSyncLobbyState();
+    const intervalId = window.setInterval(() => {
+      safeSyncLobbyState();
+    }, 2000);
+
+    return () => {
+      abortController.abort();
+      window.clearInterval(intervalId);
+    };
+  }, [syncLobbyState]);
 
   return (
     <main className="flex flex-1 flex-col items-center px-4 py-8">
@@ -141,7 +244,7 @@ export function LobbyRealtime({
                   player={player}
                   isHost={isThisPlayerTheHost}
                   isCurrentUser={isThisPlayerCurrentUser}
-                  animate={newPlayerIds.current.has(player.id)}
+                  animate={newPlayerIds.has(player.id)}
                   kickButton={kickButton}
                 />
               </div>
