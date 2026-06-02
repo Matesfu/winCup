@@ -19,7 +19,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   const { redirectTo } = await searchParams;
 
-  if (user) redirect(redirectTo ?? "/room/create");
+  if (user) redirect(redirectTo ?? "/dashboard");
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">

@@ -13,7 +13,7 @@ async function signIn(page: import("@playwright/test").Page) {
   await page.getByRole("textbox", { name: /username or email/i }).fill("testhost@wincup.test");
   await page.getByLabel(/password/i).fill("testpass123");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/room\/create/, { timeout: 10_000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
 }
 
 test.describe("Winner page", () => {

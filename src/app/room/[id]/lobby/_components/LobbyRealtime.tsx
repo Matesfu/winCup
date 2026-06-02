@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Divider } from "@/components/ui/Divider";
 import { CountryChip } from "@/components/ui/CountryChip";
@@ -14,7 +14,7 @@ import type { Player, RoomPublic } from "@/lib/types/database";
 
 interface CountryRow {
   country_code: string;
-  countries: { code: string; name: string; flag_emoji: string };
+  countries: { code: string; name: string; flag_emoji: string; is_knocked_out: boolean };
 }
 
 interface LobbyRealtimeProps {
@@ -50,7 +50,38 @@ export function LobbyRealtime({
   );
 
   const totalSlots = initialCountries.length;
-  const isReady = players.length >= totalSlots && totalSlots > 0;
+  const assignmentMode = room.assignment_mode;
+  const isPlayerChoice = assignmentMode === "player_choice";
+  const chosenCount = players.filter((player) => player.assigned_country).length;
+  const countryByCode = useMemo(
+    () =>
+      new Map(
+        initialCountries.map((row) => [
+          row.country_code,
+          row.countries,
+        ])
+      ),
+    [initialCountries]
+  );
+  const isReady =
+    totalSlots >= 2 &&
+    (isPlayerChoice
+      ? chosenCount >= 2 && chosenCount === players.length
+      : players.length >= 2 && players.length <= totalSlots);
+  const waitingMessage =
+    totalSlots < 2
+      ? "This room needs at least 2 selectable countries."
+      : isPlayerChoice
+        ? chosenCount < 2
+          ? "Waiting for at least 2 players to choose countries."
+          : chosenCount !== players.length
+            ? "Waiting for every joined player to choose a country."
+            : "Ready to start."
+        : players.length < 2
+          ? "Waiting for at least 2 players before the draw."
+          : players.length > totalSlots
+            ? "There are more players than available countries."
+            : "Ready to draw.";
 
   const redirectForStatus = useCallback(
     (status: RoomPublic["status"]) => {
@@ -189,6 +220,15 @@ export function LobbyRealtime({
 
         {/* Room meta */}
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted">
+          <span className="text-white">
+            {room.room_name}
+          </span>
+          <span>
+            {isPlayerChoice ? "Player choice" : "Random assignment"}
+          </span>
+          <span>
+            {room.visibility === "public" ? "Public room" : "Private room"}
+          </span>
           <span>
             {room.win_rule === "strict" ? "Must Win the Cup" : "Last Team Standing"}
           </span>
@@ -215,7 +255,13 @@ export function LobbyRealtime({
         <Divider label="Players" />
 
         {/* Progress */}
-        <LobbyProgress joined={players.length} total={totalSlots} />
+        <LobbyProgress
+          joined={players.length}
+          total={totalSlots}
+          assignmentMode={assignmentMode}
+          chosen={chosenCount}
+          isReady={isReady}
+        />
 
         {/* Player list */}
         <div
@@ -245,6 +291,11 @@ export function LobbyRealtime({
                   isHost={isThisPlayerTheHost}
                   isCurrentUser={isThisPlayerCurrentUser}
                   animate={newPlayerIds.has(player.id)}
+                  country={
+                    player.assigned_country
+                      ? countryByCode.get(player.assigned_country)
+                      : undefined
+                  }
                   kickButton={kickButton}
                 />
               </div>
@@ -256,11 +307,16 @@ export function LobbyRealtime({
 
         {/* Host CTA / Non-host waiting */}
         {isHost ? (
-          <StartDrawButton roomId={roomId} isReady={isReady} />
+          <StartDrawButton
+            roomId={roomId}
+            isReady={isReady}
+            assignmentMode={assignmentMode}
+            waitingMessage={waitingMessage}
+          />
         ) : (
           <div className="flex flex-col items-center gap-1 py-2" data-testid="waiting-message">
             <p className="animate-pulse text-sm text-muted">
-              ⏳ Waiting for the host to start the draw…
+              ⏳ Waiting for the host to {isPlayerChoice ? "start the room" : "start the draw"}…
             </p>
           </div>
         )}

@@ -14,12 +14,12 @@ async function signIn(page: import("@playwright/test").Page, email = "testhost@w
   await page.getByRole("textbox", { name: /username or email/i }).fill(email);
   await page.getByLabel(/password/i).fill("testpass123");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/room\/create/, { timeout: 10_000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
 }
 
 async function createRoomAndNavigateToLobby(page: import("@playwright/test").Page) {
   await page.goto("/room/create");
-  // Select 4 countries (minimum for draw)
+  // Select a country pool for the draw
   for (let i = 0; i < 4; i++) {
     await page.locator('[data-testid^="country-card-"]').nth(i).click();
   }
@@ -43,17 +43,11 @@ test.describe("Draw page", () => {
     await expect(page).toHaveURL(/\/lobby/);
   });
 
-  test("start draw button triggers animation when all players joined (4 countries, 4 players)", async ({
+  test("start draw button stays disabled until at least 2 players have joined", async ({
     page,
-    browser,
   }) => {
-    // This test requires 4 players for 4 countries — simplified: host is 1 player
-    // and we selected 4 countries. With minimum = 4, we need 4 players.
-    // For this test we just verify host can start the draw when the room is full.
-    // Skip if this becomes too complex; verify basic draw page render.
     await signIn(page);
     await page.goto("/room/create");
-    // Select exactly 4 countries
     for (let i = 0; i < 4; i++) {
       await page.locator('[data-testid^="country-card-"]').nth(i).click();
     }
@@ -62,7 +56,7 @@ test.describe("Draw page", () => {
 
     // Start draw button exists
     await expect(page.getByTestId("start-draw-button")).toBeVisible();
-    // For a room with 4 countries and 1 player (host), button should be disabled
+    // Host is the only player, so the button should be disabled
     await expect(page.getByTestId("start-draw-button")).toBeDisabled();
   });
 

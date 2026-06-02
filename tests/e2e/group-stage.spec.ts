@@ -14,12 +14,12 @@ async function signIn(page: import("@playwright/test").Page) {
   await page.getByRole("textbox", { name: /username or email/i }).fill("testhost@wincup.test");
   await page.getByLabel(/password/i).fill("testpass123");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/room\/create/, { timeout: 10_000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
 }
 
 async function createRoomAndGoToGroupStage(page: import("@playwright/test").Page): Promise<string> {
   await page.goto("/room/create");
-  // Select exactly 4 countries (minimum for a room)
+  // Select a valid country pool
   for (let i = 0; i < 4; i++) {
     await page.locator('[data-testid^="country-card-"]').nth(i).click();
   }

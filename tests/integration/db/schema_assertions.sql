@@ -190,5 +190,61 @@ BEGIN
   RAISE NOTICE '[PASS] All 6 key indices exist';
 END $$;
 
+-- ── 11. Public/private room columns exist ───────────────────────────────────
+DO $$
+DECLARE
+  column_count int;
+BEGIN
+  SELECT COUNT(*) INTO column_count
+  FROM   information_schema.columns
+  WHERE  table_schema = 'public'
+    AND  table_name = 'rooms'
+    AND  column_name IN ('room_name','visibility','assignment_mode','started_at');
+
+  ASSERT column_count = 4,
+    format('Expected 4 public/private room columns, found %s. Check migration 20240111000000.', column_count);
+
+  RAISE NOTICE '[PASS] rooms public/private columns exist';
+END $$;
+
+-- ── 12. Public/private room indexes exist ───────────────────────────────────
+DO $$
+DECLARE
+  idx_count int;
+BEGIN
+  SELECT COUNT(*) INTO idx_count
+  FROM   pg_indexes
+  WHERE  schemaname = 'public'
+    AND  indexname IN (
+      'idx_players_room_assigned_country_unique',
+      'idx_players_room_user_unique',
+      'idx_rooms_public_lobby_discovery',
+      'idx_rooms_assignment_mode',
+      'idx_rooms_room_name_lower'
+    );
+
+  ASSERT idx_count = 5,
+    format('Expected 5 public/private indexes, found %s. Check migration 20240111000000.', idx_count);
+
+  RAISE NOTICE '[PASS] public/private room indexes exist';
+END $$;
+
+-- ── 13. Countries have global cup status ────────────────────────────────────
+DO $$
+DECLARE
+  column_count int;
+BEGIN
+  SELECT COUNT(*) INTO column_count
+  FROM   information_schema.columns
+  WHERE  table_schema = 'public'
+    AND  table_name = 'countries'
+    AND  column_name = 'is_knocked_out';
+
+  ASSERT column_count = 1,
+    'countries.is_knocked_out missing. Check migration 20240110000000.';
+
+  RAISE NOTICE '[PASS] countries.is_knocked_out exists';
+END $$;
+
 SELECT '══════════════════════════════════════════════' AS separator;
 SELECT 'All schema assertions passed ✓'               AS result;

@@ -18,7 +18,7 @@ async function signIn(page: import("@playwright/test").Page) {
   await page.getByRole("textbox", { name: /username or email/i }).fill("testhost@wincup.test");
   await page.getByLabel(/password/i).fill("testpass123");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/room\/create/, { timeout: 10000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 10000 });
 }
 
 test.describe("Create Room page", () => {
@@ -33,28 +33,26 @@ test.describe("Create Room page", () => {
 
   test("page loads with all form sections after sign-in", async ({ page }) => {
     await signIn(page);
-    await expect(page.getByText("1. Your Info")).toBeVisible();
-    await expect(page.getByText("2. Win Rule")).toBeVisible();
-    await expect(page.getByText("3. Pick Countries")).toBeVisible();
-    await expect(page.getByText("4. Stake (Optional)")).toBeVisible();
+    await expect(page.getByText("1. Room Setup")).toBeVisible();
+    await expect(page.getByText("2. Your Info")).toBeVisible();
+    await expect(page.getByText("3. Assignment Mode")).toBeVisible();
+    await expect(page.getByText("4. Win Rule")).toBeVisible();
+    await expect(page.getByText("5. Pick Countries")).toBeVisible();
+    await expect(page.getByText("6. Stake (Optional)")).toBeVisible();
   });
 
-  test("Create Room button is disabled with fewer than 4 countries", async ({ page }) => {
+  test("Create Room button is disabled with fewer than 2 countries", async ({ page }) => {
     await signIn(page);
-    // Select only 2 countries
     const cards = page.locator('[data-testid^="country-card-"]');
     await cards.nth(0).click();
-    await cards.nth(1).click();
     await expect(page.getByTestId("create-room-submit")).toBeDisabled();
   });
 
-  test("Create Room button enables after selecting 4 countries", async ({ page }) => {
+  test("Create Room button enables after selecting 2 countries", async ({ page }) => {
     await signIn(page);
     const cards = page.locator('[data-testid^="country-card-"]');
     await cards.nth(0).click();
     await cards.nth(1).click();
-    await cards.nth(2).click();
-    await cards.nth(3).click();
     await expect(page.getByTestId("create-room-submit")).not.toBeDisabled();
   });
 
@@ -82,8 +80,8 @@ test.describe("Create Room page", () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await signIn(page);
     // All sections visible
-    await expect(page.getByText("1. Your Info")).toBeVisible();
-    await expect(page.getByText("3. Pick Countries")).toBeVisible();
+    await expect(page.getByText("1. Room Setup")).toBeVisible();
+    await expect(page.getByText("5. Pick Countries")).toBeVisible();
     // No horizontal scroll
     const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
     expect(bodyWidth).toBeLessThanOrEqual(375 + 5); // 5px tolerance

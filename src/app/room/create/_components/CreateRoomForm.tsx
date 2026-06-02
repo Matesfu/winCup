@@ -10,7 +10,7 @@ import { WinRuleToggle } from "./WinRuleToggle";
 import { CountryGrid } from "./CountryGrid";
 import { StakeInput } from "./StakeInput";
 import { ALLOWED_AVATARS } from "@/lib/constants";
-import type { WinRule, Country } from "@/lib/types/database";
+import type { AssignmentMode, RoomVisibility, WinRule, Country } from "@/lib/types/database";
 
 interface CreateRoomFormProps {
   countries: Pick<Country, "code" | "name" | "flag_emoji" | "is_knocked_out">[];
@@ -24,10 +24,14 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
   );
 
   // Local form state — synced into hidden inputs before submission
+  const [roomName, setRoomName] = useState(defaultHostName ? `${defaultHostName}'s room` : "");
   const [hostName, setHostName] = useState(defaultHostName);
   const [avatar, setAvatar] = useState<string>(ALLOWED_AVATARS[0]);
   const [winRule, setWinRule] = useState<WinRule>("last_standing");
+  const [assignmentMode, setAssignmentMode] = useState<AssignmentMode>("random");
+  const [visibility, setVisibility] = useState<RoomVisibility>("private");
   const [selectedCountries, setSelectedCountries] = useState<Set<string>>(new Set());
+  const [hostCountryCode, setHostCountryCode] = useState("");
   const [stakeAmount, setStakeAmount] = useState("");
   // Whether the host is participating as a player in the draw (default: yes)
   const [hostIsPlaying, setHostIsPlaying] = useState(true);
@@ -36,24 +40,38 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
     const country = countries.find((candidate) => candidate.code === code);
     if (country?.is_knocked_out) return;
 
+    const wasSelected = selectedCountries.has(code);
     setSelectedCountries((prev) => {
       const next = new Set(prev);
       if (next.has(code)) next.delete(code);
       else next.add(code);
       return next;
     });
+    if (wasSelected && hostCountryCode === code) setHostCountryCode("");
   }
 
-  const canSubmit = selectedCountries.size >= 4 && hostName.trim().length > 0;
+  const selectedCountryOptions = countries.filter(
+    (country) => selectedCountries.has(country.code) && !country.is_knocked_out
+  );
+  const needsHostCountry = assignmentMode === "player_choice" && hostIsPlaying;
+  const canSubmit =
+    roomName.trim().length > 0 &&
+    hostName.trim().length > 0 &&
+    selectedCountries.size >= 2 &&
+    (!needsHostCountry || hostCountryCode.length > 0);
 
   return (
     <form action={formAction} className="flex flex-col gap-6">
       {/* Hidden inputs carry state that is controlled outside native form inputs */}
+      <input type="hidden" name="roomName" value={roomName} />
       <input type="hidden" name="hostName" value={hostName} />
       <input type="hidden" name="avatarEmoji" value={avatar} />
       <input type="hidden" name="winRule" value={winRule} />
+      <input type="hidden" name="assignmentMode" value={assignmentMode} />
+      <input type="hidden" name="visibility" value={visibility} />
       <input type="hidden" name="stakeAmount" value={stakeAmount} />
       <input type="hidden" name="hostIsPlaying" value={hostIsPlaying ? "true" : "false"} />
+      <input type="hidden" name="hostCountryCode" value={hostCountryCode} />
       {Array.from(selectedCountries).map((code) => (
         <input key={code} type="hidden" name="countries" value={code} />
       ))}
@@ -68,9 +86,58 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
         </div>
       )}
 
-      {/* Section 1 — Host info */}
       <FormSection
-        title="1. Your Info"
+        title="1. Room Setup"
+        description="Name the room and choose how players can find it."
+      >
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-white">Room name</span>
+          <input
+            value={roomName}
+            onChange={(event) => setRoomName(event.target.value)}
+            maxLength={60}
+            placeholder="Friday night sweepstake"
+            disabled={isPending}
+            className="h-11 rounded-xl border border-white/10 bg-surface px-3 text-sm text-white placeholder:text-muted outline-none transition-colors focus:border-gold focus:ring-1 focus:ring-gold disabled:opacity-50"
+          />
+          {state?.errors?.roomName && (
+            <span className="text-xs text-danger">{state.errors.roomName}</span>
+          )}
+        </label>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(["private", "public"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              disabled={isPending}
+              onClick={() => setVisibility(option)}
+              className={[
+                "rounded-xl border px-4 py-3 text-left transition-colors",
+                visibility === option
+                  ? "border-gold/50 bg-gold/10"
+                  : "border-white/8 bg-surface hover:border-white/20",
+              ].join(" ")}
+            >
+              <span className="block text-sm font-bold text-white">
+                {option === "private" ? "Private" : "Public"}
+              </span>
+              <span className="mt-1 block text-xs text-muted">
+                {option === "private"
+                  ? "Join by code or invite link only."
+                  : "Visible in dashboard discovery while waiting."}
+              </span>
+            </button>
+          ))}
+        </div>
+        {state?.errors?.visibility && (
+          <p className="text-xs text-danger">{state.errors.visibility}</p>
+        )}
+      </FormSection>
+
+      {/* Section 2 — Host info */}
+      <FormSection
+        title="2. Your Info"
         description="Choose a display name for this game."
       >
         <HostNameInput
@@ -127,18 +194,55 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
         </button>
       </FormSection>
 
-      {/* Section 2 — Win rule */}
       <FormSection
-        title="2. Win Rule"
+        title="3. Assignment Mode"
+        description="Choose how countries are assigned to players."
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          {(["random", "player_choice"] as const).map((option) => (
+            <button
+              key={option}
+              type="button"
+              disabled={isPending}
+              onClick={() => {
+                setAssignmentMode(option);
+                if (option === "random") setHostCountryCode("");
+              }}
+              className={[
+                "rounded-xl border px-4 py-3 text-left transition-colors",
+                assignmentMode === option
+                  ? "border-gold/50 bg-gold/10"
+                  : "border-white/8 bg-surface hover:border-white/20",
+              ].join(" ")}
+            >
+              <span className="block text-sm font-bold text-white">
+                {option === "random" ? "Random assignment" : "Player choice"}
+              </span>
+              <span className="mt-1 block text-xs text-muted">
+                {option === "random"
+                  ? "Players join, then WinCup randomly assigns countries."
+                  : "Players choose an available country when joining."}
+              </span>
+            </button>
+          ))}
+        </div>
+        {state?.errors?.assignmentMode && (
+          <p className="text-xs text-danger">{state.errors.assignmentMode}</p>
+        )}
+      </FormSection>
+
+      {/* Section 4 — Win rule */}
+      <FormSection
+        title="4. Win Rule"
         description="How is the winner decided at the end?"
       >
         <WinRuleToggle value={winRule} onChange={setWinRule} disabled={isPending} />
       </FormSection>
 
-      {/* Section 3 — Country selection */}
+      {/* Section 5 — Country selection */}
       <FormSection
-        title="3. Pick Countries"
-        description="Select the countries that will be in the draw. You need at least 4."
+        title="5. Pick Countries"
+        description="Select the countries available in this room. You need at least 2."
       >
         <CountryGrid
           countries={countries}
@@ -146,12 +250,41 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
           onToggle={toggleCountry}
           error={state?.errors?.countries}
           disabled={isPending}
+          minimum={2}
         />
       </FormSection>
 
-      {/* Section 4 — Optional stake */}
+      {needsHostCountry && (
+        <FormSection
+          title="6. Your Country"
+          description="Because you are playing, choose your country before creating the room."
+        >
+          <label htmlFor="hostCountryCode" className="text-sm font-medium text-white">
+            Choose your country
+          </label>
+          <select
+            id="hostCountryCode"
+            value={hostCountryCode}
+            onChange={(event) => setHostCountryCode(event.target.value)}
+            disabled={isPending || selectedCountryOptions.length === 0}
+            className="h-11 rounded-xl border border-white/10 bg-surface px-3 text-sm font-semibold text-white outline-none transition-colors focus:border-gold focus:ring-1 focus:ring-gold disabled:opacity-50"
+          >
+            <option value="">Choose your country</option>
+            {selectedCountryOptions.map((country) => (
+              <option key={country.code} value={country.code}>
+                {country.flag_emoji} {country.name}
+              </option>
+            ))}
+          </select>
+          {state?.errors?.hostCountry && (
+            <p className="text-xs text-danger">{state.errors.hostCountry}</p>
+          )}
+        </FormSection>
+      )}
+
+      {/* Section 7 — Optional stake */}
       <FormSection
-        title="4. Stake (Optional)"
+        title={needsHostCountry ? "7. Stake (Optional)" : "6. Stake (Optional)"}
         description="Set a display amount for the pot. WinCup does not process payments."
       >
         <StakeInput
@@ -185,7 +318,11 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
         <p className="text-center text-xs text-muted">
           {hostName.trim().length === 0
             ? "Enter a display name to continue."
-            : "Select at least 4 countries to continue."}
+            : roomName.trim().length === 0
+              ? "Enter a room name to continue."
+              : needsHostCountry && hostCountryCode.length === 0
+                ? "Choose your country to continue."
+                : "Select at least 2 countries to continue."}
         </p>
       )}
     </form>

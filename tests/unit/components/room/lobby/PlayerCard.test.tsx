@@ -51,4 +51,16 @@ describe("PlayerCard", () => {
     render(<PlayerCard player={player} isHost={false} isCurrentUser={false} />);
     expect(screen.getByText("👤")).toBeInTheDocument();
   });
+
+  it("renders a chosen country when provided", () => {
+    render(
+      <PlayerCard
+        player={{ ...BASE_PLAYER, assigned_country: "ARG" }}
+        isHost={false}
+        isCurrentUser={false}
+        country={{ name: "Argentina", flag_emoji: "🇦🇷" }}
+      />
+    );
+    expect(screen.getByText(/Argentina/)).toBeInTheDocument();
+  });
 });

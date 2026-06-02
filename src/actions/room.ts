@@ -1,13 +1,28 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createSessionClient, createAdminClient } from "@/lib/supabase/server";
 import { generateRoomCode } from "@/lib/room-code";
 import { Validation } from "@/lib/validation";
+import {
+  getPrivateRoomJoinCookieName,
+  normalizeRoomCode,
+  PRIVATE_ROOM_JOIN_COOKIE_MAX_AGE,
+} from "@/lib/private-room-access";
 // Import from @/lib/constants (no directive) — not from the "use client" EmojiPicker
 // component, which would cause a Client Reference proxy on the server and break .includes()
 import { ALLOWED_AVATARS } from "@/lib/constants";
-import type { WinRule, Country, Player, RoomPublic, RoomTeam, KnockoutStage } from "@/lib/types/database";
+import type {
+  AssignmentMode,
+  WinRule,
+  Country,
+  Player,
+  RoomPublic,
+  RoomTeam,
+  KnockoutStage,
+  RoomVisibility,
+} from "@/lib/types/database";
 import { assignCountries } from "@/lib/draw";
 import { resolveRoomIfComplete } from "@/lib/resolution";
 import {
@@ -28,9 +43,13 @@ import { fetchR16Fixtures } from "@/lib/football-data";
 
 export type CreateRoomState = {
   errors?: {
+    roomName?: string;
     hostName?: string;
     countries?: string;
     winRule?: string;
+    assignmentMode?: string;
+    visibility?: string;
+    hostCountry?: string;
     stakeAmount?: string;
     form?: string;
   };
@@ -53,27 +72,54 @@ export async function createRoom(
   }
 
   // 2. Parse inputs
+  const roomName = (formData.get("roomName") as string) ?? "";
   const hostName = (formData.get("hostName") as string) ?? "";
   const avatarEmoji = (formData.get("avatarEmoji") as string) ?? "";
   const winRule = (formData.get("winRule") as WinRule) ?? "last_standing";
+  const assignmentMode = ((formData.get("assignmentMode") as string) ?? "random") as AssignmentMode;
+  const visibility = ((formData.get("visibility") as string) ?? "private") as RoomVisibility;
   const stakeAmountRaw = (formData.get("stakeAmount") as string) ?? "";
   const countries = formData.getAll("countries") as string[];
+  const selectedCountryCodes = Array.from(new Set(countries));
+  const hostCountryCode = ((formData.get("hostCountryCode") as string) ?? "").trim();
   // Whether the host wants to participate as a player (default: true)
   const hostIsPlaying = (formData.get("hostIsPlaying") as string) !== "false";
 
   // 3. Server-side validation
+  const roomNameError = Validation.roomName(roomName);
   const hostNameError = Validation.hostName(hostName);
   const winRuleError = Validation.winRule(winRule);
-  const countryError = Validation.countrySelection(countries);
+  const assignmentModeError = Validation.assignmentMode(assignmentMode);
+  const visibilityError = Validation.roomVisibility(visibility);
+  const countryError = Validation.countrySelection(selectedCountryCodes);
   const stakeError = Validation.stakeAmount(stakeAmountRaw);
+  const hostCountryError =
+    assignmentMode === "player_choice" && hostIsPlaying
+      ? Validation.countryChoice(hostCountryCode)
+      : null;
 
-  if (hostNameError || winRuleError || countryError || stakeError) {
+  if (
+    roomNameError ||
+    hostNameError ||
+    winRuleError ||
+    assignmentModeError ||
+    visibilityError ||
+    countryError ||
+    stakeError ||
+    hostCountryError ||
+    selectedCountryCodes.length !== countries.length
+  ) {
     return {
       errors: {
+        ...(roomNameError && { roomName: roomNameError }),
         ...(hostNameError && { hostName: hostNameError }),
         ...(winRuleError && { winRule: winRuleError }),
+        ...(assignmentModeError && { assignmentMode: assignmentModeError }),
+        ...(visibilityError && { visibility: visibilityError }),
         ...(countryError && { countries: countryError }),
+        ...(selectedCountryCodes.length !== countries.length && { countries: "Duplicate countries are not allowed." }),
         ...(stakeError && { stakeAmount: stakeError }),
+        ...(hostCountryError && { hostCountry: hostCountryError }),
       },
     };
   }
@@ -105,11 +151,11 @@ export async function createRoom(
   const { data: validCountries } = await (admin as any)
     .from("countries")
     .select("code,name,is_knocked_out")
-    .in("code", countries) as {
+    .in("code", selectedCountryCodes) as {
       data: Pick<Country, "code" | "name" | "is_knocked_out">[] | null;
     };
 
-  if (!validCountries || validCountries.length !== countries.length) {
+  if (!validCountries || validCountries.length !== selectedCountryCodes.length) {
     return { errors: { countries: "One or more country codes are invalid" } };
   }
 
@@ -122,6 +168,14 @@ export async function createRoom(
           .join(", ")}.`,
       },
     };
+  }
+
+  if (
+    assignmentMode === "player_choice" &&
+    hostIsPlaying &&
+    !selectedCountryCodes.includes(hostCountryCode)
+  ) {
+    return { errors: { hostCountry: "Choose one of the selected room countries." } };
   }
 
   // 6. Generate unique room code (up to 5 retries)
@@ -156,6 +210,9 @@ export async function createRoom(
       code: roomCode,
       host_user_id: user.id,
       host_name: hostName.trim(),
+      room_name: roomName.trim(),
+      visibility,
+      assignment_mode: assignmentMode,
       status: "lobby",
       win_rule: winRule,
       stake_amount: stakeAmount,
@@ -172,7 +229,7 @@ export async function createRoom(
   const { error: countriesError } = await (admin as any)
     .from("room_countries")
     .insert(
-      countries.map((code) => ({
+      selectedCountryCodes.map((code) => ({
         room_id: room.id,
         country_code: code,
         qualified: null,
@@ -198,6 +255,7 @@ export async function createRoom(
         user_id: user.id,
         name: hostName.trim(),
         avatar_emoji: avatarEmoji,
+        assigned_country: assignmentMode === "player_choice" ? hostCountryCode : null,
         is_eliminated: false,
       }) as { error: unknown };
 
@@ -286,9 +344,7 @@ export async function lookupRoomByCode(
   const codeError = Validation.roomCode(raw);
   if (codeError) return { error: codeError };
 
-  // Normalise to "WC-XXXX"
-  const cleaned = raw.trim().toUpperCase().replace(/\s/g, "");
-  const code = cleaned.startsWith("WC-") ? cleaned : `WC-${cleaned}`;
+  const code = normalizeRoomCode(raw);
 
   const admin = createAdminClient();
   const { data: room, error: queryError } = await (admin as any)
@@ -305,6 +361,17 @@ export async function lookupRoomByCode(
   if (!room) return { error: "Room not found. Check the code and try again." };
   if (room.status !== "lobby") return { error: "That room's game has already started." };
 
+  const cookieStore = await cookies();
+  cookieStore.set({
+    name: getPrivateRoomJoinCookieName(room.id),
+    value: code,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: PRIVATE_ROOM_JOIN_COOKIE_MAX_AGE,
+    path: `/room/${room.id}`,
+  });
+
   redirect(`/room/${room.id}/join`);
 }
 
@@ -313,6 +380,7 @@ export async function lookupRoomByCode(
 export type JoinRoomState = {
   errors?: {
     playerName?: string;
+    countryCode?: string;
     form?: string;
   };
 } | null;
@@ -328,6 +396,7 @@ export async function joinRoom(
   const roomId = (formData.get("roomId") as string) ?? "";
   const playerName = (formData.get("playerName") as string) ?? "";
   const avatarEmoji = (formData.get("avatarEmoji") as string) ?? "";
+  const countryCode = ((formData.get("countryCode") as string) ?? "").trim();
 
   // 1. Require authenticated session
   const supabase = await createSessionClient();
@@ -350,38 +419,85 @@ export async function joinRoom(
   // 3. Fetch room state
   const { data: room } = await (admin as any)
     .from("rooms")
-    .select("id, status, host_user_id")
+    .select("id, code, status, host_user_id, assignment_mode, visibility")
     .eq("id", roomId)
-    .maybeSingle() as { data: Pick<RoomPublic, "id" | "status" | "host_user_id"> | null };
+    .maybeSingle() as {
+      data: Pick<RoomPublic, "id" | "code" | "status" | "host_user_id" | "assignment_mode" | "visibility"> | null;
+    };
 
   if (!room) return { errors: { form: "Room not found." } };
   if (room.status !== "lobby") {
     return { errors: { form: "This game has already started. You cannot join." } };
   }
 
-  // 4. Check capacity
-  const { data: countryRows } = await (admin as any)
+  // 4. Check capacity and selected country pool
+  const { data: roomCountries } = await (admin as any)
     .from("room_countries")
-    .select("id", { count: "exact", head: true })
-    .eq("room_id", roomId) as { data: null; count: number | null };
+    .select("country_code, countries:countries(code,name,is_knocked_out)")
+    .eq("room_id", roomId) as {
+      data: {
+        country_code: string;
+        countries: Pick<Country, "code" | "name" | "is_knocked_out">;
+      }[] | null;
+    };
 
   const { data: players } = await (admin as any)
     .from("players")
-    .select("id, user_id")
-    .eq("room_id", roomId) as { data: Pick<Player, "id" | "user_id">[] | null };
-
-  const countryCount = (countryRows as unknown as number | null) ??
-    ((await (admin as any).from("room_countries").select("id").eq("room_id", roomId) as { data: { id: string }[] | null }).data?.length ?? 0);
+    .select("id, user_id, assigned_country")
+    .eq("room_id", roomId) as {
+      data: Pick<Player, "id" | "user_id" | "assigned_country">[] | null;
+    };
 
   const playerList = players ?? [];
+  const selectedCountries = roomCountries ?? [];
+  const selectableCountries = selectedCountries.filter(
+    (country) => !country.countries.is_knocked_out
+  );
+  const countryCount = selectableCountries.length;
 
   // 5. Duplicate-join check — already in this room
   const alreadyJoined = playerList.some((p) => p.user_id === user.id);
   if (alreadyJoined) redirect(`/room/${roomId}/lobby`);
 
+  if (room.visibility === "private" && room.host_user_id !== user.id) {
+    const cookieStore = await cookies();
+    const joinCookie = cookieStore.get(getPrivateRoomJoinCookieName(roomId));
+    if (joinCookie?.value !== room.code) {
+      return { errors: { form: "Enter the private room code before joining." } };
+    }
+  }
+
   // 6. Capacity check
+  if (countryCount < 2) {
+    return {
+      errors: {
+        form: "This room does not have at least 2 countries still in the cup.",
+      },
+    };
+  }
+
   if (playerList.length >= countryCount) {
     return { errors: { form: "This room is full." } };
+  }
+
+  let assignedCountry: string | null = null;
+
+  if (room.assignment_mode === "player_choice") {
+    const countryError = Validation.countryChoice(countryCode);
+    if (countryError) return { errors: { countryCode: countryError } };
+
+    const selectedCountry = selectedCountries.find((country) => country.country_code === countryCode);
+    if (!selectedCountry) {
+      return { errors: { countryCode: "Choose a country from this room." } };
+    }
+    if (selectedCountry.countries.is_knocked_out) {
+      return { errors: { countryCode: `${selectedCountry.countries.name} is already knocked out.` } };
+    }
+    if (playerList.some((player) => player.assigned_country === countryCode)) {
+      return { errors: { countryCode: "That country is already taken." } };
+    }
+
+    assignedCountry = countryCode;
   }
 
   // 7. Rate limit: max 10 joins per 30 minutes
@@ -404,26 +520,33 @@ export async function joinRoom(
       user_id: user.id,
       name: playerName.trim(),
       avatar_emoji: avatarEmoji,
+      assigned_country: assignedCountry,
       is_eliminated: false,
     }) as { error: unknown };
 
   if (insertError) {
+    const message = insertError && typeof insertError === "object" && "message" in insertError
+      ? String((insertError as { message?: string }).message ?? "")
+      : "";
+    if (room.assignment_mode === "player_choice" && message.includes("idx_players_room_assigned_country_unique")) {
+      return { errors: { countryCode: "That country was just taken. Choose another one." } };
+    }
     return { errors: { form: "Failed to join room. Please try again." } };
   }
 
   redirect(`/room/${roomId}/lobby`);
 }
 
-// ─── startDraw (Phase 3 — real Fisher-Yates implementation) ──────────────────
+// ─── startDraw / startRoom ────────────────────────────────────────────────────
 
 export type StartDrawState = {
   error?: string;
 } | null;
 
 /**
- * Host-only action that runs the secure draw.
- * Idempotent: if any player already has an assigned_country, redirects
- * to the draw page without re-shuffling.
+ * Host-only action that starts the room.
+ * Random rooms run the secure draw.
+ * Player-choice rooms skip draw animation and go straight to group stage.
  */
 export async function startDraw(
   prevState: StartDrawState,
@@ -440,9 +563,11 @@ export async function startDraw(
   // 1. Fetch room
   const { data: room } = await (admin as any)
     .from("rooms")
-    .select("id, status, host_user_id")
+    .select("id, status, host_user_id, assignment_mode")
     .eq("id", roomId)
-    .maybeSingle() as { data: Pick<RoomPublic, "id" | "status" | "host_user_id"> | null };
+    .maybeSingle() as {
+      data: Pick<RoomPublic, "id" | "status" | "host_user_id" | "assignment_mode"> | null;
+    };
 
   if (!room) return { error: "Room not found." };
   if (room.host_user_id !== user.id) return { error: "Only the host can start the draw." };
@@ -456,20 +581,45 @@ export async function startDraw(
       .eq("room_id", roomId) as Promise<{ data: Pick<Player, "id" | "name" | "assigned_country">[] | null }>,
     (admin as any)
       .from("room_countries")
-      .select("country_code")
+      .select("country_code, countries:countries(is_knocked_out)")
       .eq("room_id", roomId) as Promise<{ data: { country_code: string }[] | null }>,
   ]);
 
   const players = playersResult.data ?? [];
-  const countryCodes = (countriesResult.data ?? []).map((r) => r.country_code);
+  const countryCodes = (countriesResult.data ?? [])
+    .filter((country) => {
+      const relation = country as {
+        countries?: { is_knocked_out?: boolean } | { is_knocked_out?: boolean }[];
+      };
+      const status = Array.isArray(relation.countries)
+        ? relation.countries[0]
+        : relation.countries;
+      return !status?.is_knocked_out;
+    })
+    .map((r) => r.country_code);
+  const availableCountryCodes = new Set(countryCodes);
 
   const playerCount = players.length;
   const countryCount = countryCodes.length;
 
-  if (playerCount < countryCount) {
-    return {
-      error: `All players must join before the draw (${playerCount}/${countryCount}).`,
-    };
+  if (playerCount < 2) return { error: "At least 2 players must join before starting." };
+  if (playerCount > countryCount) {
+    return { error: "There are more players than countries still in the cup." };
+  }
+
+  if (room.assignment_mode === "player_choice") {
+    const missingCountry = players.some(
+      (player) => !player.assigned_country || !availableCountryCodes.has(player.assigned_country)
+    );
+    if (missingCountry) return { error: "Every player must choose a country still in the cup before starting." };
+
+    const { error: statusError } = await (admin as any)
+      .from("rooms")
+      .update({ status: "group_stage", started_at: new Date().toISOString() })
+      .eq("id", roomId) as { error: unknown };
+
+    if (statusError) return { error: "Failed to start the room. Please try again." };
+    redirect(`/room/${roomId}/group-stage`);
   }
 
   // 3. Idempotency: if assignments already exist, draw already ran → skip to page
@@ -497,7 +647,7 @@ export async function startDraw(
   // 6. Transition room to 'drawn' — triggers Realtime event for all lobby clients
   const { error: statusError } = await (admin as any)
     .from("rooms")
-    .update({ status: "drawn" })
+    .update({ status: "drawn", started_at: new Date().toISOString() })
     .eq("id", roomId) as { error: unknown };
 
   if (statusError) return { error: "Failed to finalise the draw. Please try again." };

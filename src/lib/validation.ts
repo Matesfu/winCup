@@ -43,10 +43,36 @@ export const Validation = {
     return null;
   },
 
-  countrySelection(codes: string[]): string | null {
-    if (codes.length < 4)
-      return `Select at least 4 countries (currently ${codes.length})`;
-    if (codes.length > 36) return "Too many countries selected";
+  roomName(value: string): string | null {
+    const t = value.trim();
+    if (t.length < 1) return "Room name is required";
+    if (t.length > 60) return "Room name must be 60 characters or fewer";
+    return null;
+  },
+
+  roomVisibility(value: string): string | null {
+    if (!["public", "private"].includes(value)) return "Invalid room visibility";
+    return null;
+  },
+
+  assignmentMode(value: string): string | null {
+    if (!["random", "player_choice"].includes(value)) return "Invalid assignment mode";
+    return null;
+  },
+
+  countryChoice(value: string): string | null {
+    const t = value.trim();
+    if (!t) return "Choose a country";
+    if (!/^[A-Z]{2,4}$/.test(t)) return "Invalid country choice";
+    return null;
+  },
+
+  countrySelection(codes: string[], availableCountryCount?: number): string | null {
+    if (codes.length < 2)
+      return `Select at least 2 countries (currently ${codes.length})`;
+    if (availableCountryCount !== undefined && codes.length > availableCountryCount) {
+      return "Too many countries selected";
+    }
     return null;
   },
 
