@@ -29,10 +29,10 @@ export type SignInState = {
 // ─── Safe redirect validation ──────────────────────────────────────────────────
 
 function safeRedirect(redirectTo: string | null | undefined): string {
-  if (!redirectTo) return "/room/create";
+  if (!redirectTo) return "/dashboard";
   if (redirectTo.startsWith("/") && !redirectTo.includes("://"))
     return redirectTo;
-  return "/room/create";
+  return "/dashboard";
 }
 
 // ─── signUp ────────────────────────────────────────────────────────────────────

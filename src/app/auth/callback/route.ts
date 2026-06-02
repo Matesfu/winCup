@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createSessionClient } from "@/lib/supabase/server";
 
 /**
- * GET /auth/callback?code=<code>&redirectTo=/room/create
+ * GET /auth/callback?code=<code>&redirectTo=/dashboard
  *
  * Handles the one-click email confirmation link sent by Supabase.
  * Exchanges the code for a session, then redirects to the intended destination.
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const redirectTo =
     rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.includes("://")
       ? rawRedirect
-      : "/room/create";
+      : "/dashboard";
 
   if (code) {
     const supabase = await createSessionClient();

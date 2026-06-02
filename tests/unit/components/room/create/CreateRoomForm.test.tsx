@@ -48,16 +48,15 @@ describe("CreateRoomForm", () => {
     expect(nameInput?.value).toBe("golazo99");
   });
 
-  it("submit button is disabled when fewer than 4 countries selected", () => {
+  it("submit button is disabled when fewer than 2 countries selected", () => {
     renderForm();
     const btn = screen.getByTestId("create-room-submit");
     expect(btn).toBeDisabled();
   });
 
-  it("submit button becomes enabled after selecting 4 countries", () => {
+  it("submit button becomes enabled after selecting 2 countries", () => {
     renderForm();
-    // Select 4 countries
-    ["ARG", "BRA", "FRA", "ENG"].forEach((code) => {
+    ["ARG", "BRA"].forEach((code) => {
       fireEvent.click(screen.getByTestId(`country-card-${code}`));
     });
     expect(screen.getByTestId("create-room-submit")).not.toBeDisabled();
@@ -65,8 +64,7 @@ describe("CreateRoomForm", () => {
 
   it("submit button is disabled if name is cleared", () => {
     renderForm({ defaultHostName: "" });
-    // Select 4 countries
-    ["ARG", "BRA", "FRA", "ENG"].forEach((code) => {
+    ["ARG", "BRA"].forEach((code) => {
       fireEvent.click(screen.getByTestId(`country-card-${code}`));
     });
     // Name is still empty
@@ -83,10 +81,12 @@ describe("CreateRoomForm", () => {
 
   it("renders all form sections", () => {
     renderForm();
-    expect(screen.getByText("1. Your Info")).toBeInTheDocument();
-    expect(screen.getByText("2. Win Rule")).toBeInTheDocument();
-    expect(screen.getByText("3. Pick Countries")).toBeInTheDocument();
-    expect(screen.getByText("4. Stake (Optional)")).toBeInTheDocument();
+    expect(screen.getByText("1. Room Setup")).toBeInTheDocument();
+    expect(screen.getByText("2. Your Info")).toBeInTheDocument();
+    expect(screen.getByText("3. Assignment Mode")).toBeInTheDocument();
+    expect(screen.getByText("4. Win Rule")).toBeInTheDocument();
+    expect(screen.getByText("5. Pick Countries")).toBeInTheDocument();
+    expect(screen.getByText("6. Stake (Optional)")).toBeInTheDocument();
   });
 
   it("does not select knocked-out countries", () => {
@@ -99,5 +99,21 @@ describe("CreateRoomForm", () => {
 
     fireEvent.click(screen.getByTestId("country-card-ITA"));
     expect(screen.getByText(/Selected: 0/)).toBeInTheDocument();
+  });
+
+  it("requires a host country when player choice is selected and the host is playing", () => {
+    renderForm();
+
+    ["ARG", "BRA"].forEach((code) => {
+      fireEvent.click(screen.getByTestId(`country-card-${code}`));
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /Player choice/i }));
+    expect(screen.getByTestId("create-room-submit")).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Choose your country"), {
+      target: { value: "ARG" },
+    });
+    expect(screen.getByTestId("create-room-submit")).not.toBeDisabled();
   });
 });

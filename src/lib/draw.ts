@@ -17,7 +17,7 @@ export interface DrawAssignment {
  * Cryptographically secure Fisher-Yates shuffle.
  * Uses crypto.getRandomValues — NOT Math.random().
  *
- * Modulo bias is < 0.001% for arrays ≤ 36 elements, negligible for a game.
+ * Modulo bias is negligible for the small World Cup country pools used here.
  * Never mutates the input array.
  */
 export function shuffleSecurely<T>(array: T[]): T[] {
@@ -35,16 +35,16 @@ export function shuffleSecurely<T>(array: T[]): T[] {
 
 /**
  * Assigns exactly one country to each player via a secure shuffle.
- * Throws if the arrays are different lengths — this is a programming error,
- * not a user error, so it should never happen in production.
+ * The country pool may be larger than the player list; extra countries stay
+ * unassigned in the room pool.
  */
 export function assignCountries(
   players: { id: string; name: string }[],
   countryCodes: string[]
 ): DrawAssignment[] {
-  if (players.length !== countryCodes.length) {
+  if (players.length > countryCodes.length) {
     throw new Error(
-      `Player count (${players.length}) must equal country count (${countryCodes.length})`
+      `Player count (${players.length}) must be less than or equal to country count (${countryCodes.length})`
     );
   }
   const shuffled = shuffleSecurely(countryCodes);

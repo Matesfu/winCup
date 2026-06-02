@@ -14,7 +14,7 @@ async function signIn(page: import("@playwright/test").Page, email = "testhost@w
   await page.getByRole("textbox", { name: /username or email/i }).fill(email);
   await page.getByLabel(/password/i).fill("testpass123");
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/room\/create/, { timeout: 10_000 });
+  await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
 }
 
 test.describe("Lobby page", () => {
@@ -46,7 +46,7 @@ test.describe("Lobby page", () => {
   test("host sees 'Start Draw' button in lobby", async ({ page }) => {
     await signIn(page);
     await page.goto("/room/create");
-    // Select 4 countries (minimum)
+    // Select a valid country pool
     for (let i = 0; i < 4; i++) {
       await page.locator('[data-testid^="country-card-"]').nth(i).click();
     }
@@ -55,16 +55,16 @@ test.describe("Lobby page", () => {
     await expect(page.getByTestId("start-draw-button")).toBeVisible();
   });
 
-  test("Start Draw button is disabled when room not full", async ({ page }) => {
+  test("Start Draw button is disabled when fewer than 2 players joined", async ({ page }) => {
     await signIn(page);
     await page.goto("/room/create");
-    // Select 6 countries (more than 1 player slot, so button disabled)
+    // Select 6 countries, but only the host has joined
     for (let i = 0; i < 6; i++) {
       await page.locator('[data-testid^="country-card-"]').nth(i).click();
     }
     await page.getByTestId("create-room-submit").click();
     await page.waitForURL(/\/room\/[^/]+\/lobby/, { timeout: 10_000 });
-    // Host is the only player, but 6 countries selected → not full
+    // Host is the only player, so the minimum player rule is not met
     await expect(page.getByTestId("start-draw-button")).toBeDisabled();
   });
 

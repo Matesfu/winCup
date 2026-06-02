@@ -108,18 +108,61 @@ describe("Validation.stakeAmount()", () => {
 // ── countrySelection ──────────────────────────────────────────────────────────
 
 describe("Validation.countrySelection()", () => {
-  it("rejects fewer than 4 codes", () => {
-    expect(Validation.countrySelection(["ARG", "BRA", "FRA"])).not.toBeNull();
+  it("rejects fewer than 2 codes", () => {
+    expect(Validation.countrySelection(["ARG"])).not.toBeNull();
   });
-  it("accepts exactly 4 codes", () => {
-    expect(Validation.countrySelection(["ARG", "BRA", "FRA", "ENG"])).toBeNull();
+  it("accepts exactly 2 codes", () => {
+    expect(Validation.countrySelection(["ARG", "BRA"])).toBeNull();
   });
-  it("rejects more than 36 codes", () => {
-    expect(Validation.countrySelection(Array(37).fill("ARG"))).not.toBeNull();
+  it("accepts large selections when no available-country limit is provided", () => {
+    expect(Validation.countrySelection(Array(48).fill("ARG"))).toBeNull();
+  });
+  it("rejects more codes than the available-country limit", () => {
+    expect(Validation.countrySelection(["ARG", "BRA", "FRA"], 2)).not.toBeNull();
   });
   it("error message includes current count", () => {
     const msg = Validation.countrySelection(["ARG"]);
     expect(msg).toContain("1");
+  });
+});
+
+describe("Validation.roomName()", () => {
+  it("rejects empty room names", () => {
+    expect(Validation.roomName(" ")).not.toBeNull();
+  });
+  it("accepts a normal room name", () => {
+    expect(Validation.roomName("Friday sweepstake")).toBeNull();
+  });
+});
+
+describe("Validation.roomVisibility()", () => {
+  it("accepts public and private", () => {
+    expect(Validation.roomVisibility("public")).toBeNull();
+    expect(Validation.roomVisibility("private")).toBeNull();
+  });
+  it("rejects unknown visibility", () => {
+    expect(Validation.roomVisibility("friends")).not.toBeNull();
+  });
+});
+
+describe("Validation.assignmentMode()", () => {
+  it("accepts random and player_choice", () => {
+    expect(Validation.assignmentMode("random")).toBeNull();
+    expect(Validation.assignmentMode("player_choice")).toBeNull();
+  });
+  it("rejects unknown assignment mode", () => {
+    expect(Validation.assignmentMode("manual")).not.toBeNull();
+  });
+});
+
+describe("Validation.countryChoice()", () => {
+  it("accepts valid country codes", () => {
+    expect(Validation.countryChoice("ARG")).toBeNull();
+    expect(Validation.countryChoice("USA")).toBeNull();
+  });
+  it("rejects empty or malformed country codes", () => {
+    expect(Validation.countryChoice("")).not.toBeNull();
+    expect(Validation.countryChoice("arg")).not.toBeNull();
   });
 });
 

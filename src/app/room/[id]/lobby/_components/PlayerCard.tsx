@@ -7,6 +7,11 @@ interface PlayerCardProps {
   isHost: boolean;
   isCurrentUser: boolean;
   animate?: boolean;
+  country?: {
+    name: string;
+    flag_emoji: string;
+    is_knocked_out?: boolean;
+  };
   /** Optional kick button rendered on the right — provided by LobbyRealtime for the host */
   kickButton?: ReactNode;
 }
@@ -16,6 +21,7 @@ export function PlayerCard({
   isHost,
   isCurrentUser,
   animate = false,
+  country,
   kickButton,
 }: PlayerCardProps) {
   return (
@@ -40,13 +46,26 @@ export function PlayerCard({
         {player.avatar_emoji ?? "👤"}
       </span>
 
-      {/* Name */}
-      <span className="flex-1 truncate text-sm font-medium text-white">
-        {player.name}
-        {isCurrentUser && (
-          <span className="ml-1.5 text-xs text-muted">(you)</span>
+      {/* Name + country */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-white">
+          {player.name}
+          {isCurrentUser && (
+            <span className="ml-1.5 text-xs text-muted">(you)</span>
+          )}
+        </p>
+        {country && (
+          <p
+            className={[
+              "mt-0.5 truncate text-xs",
+              country.is_knocked_out ? "text-danger" : "text-muted",
+            ].join(" ")}
+          >
+            {country.flag_emoji} {country.name}
+            {country.is_knocked_out ? " (out)" : ""}
+          </p>
         )}
-      </span>
+      </div>
 
       {/* Badges + optional kick button */}
       <div className="flex shrink-0 items-center gap-2">

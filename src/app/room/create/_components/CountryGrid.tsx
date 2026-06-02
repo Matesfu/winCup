@@ -11,6 +11,7 @@ interface CountryGridProps {
   onToggle: (code: string) => void;
   error?: string;
   disabled?: boolean;
+  minimum?: number;
 }
 
 export function CountryGrid({
@@ -19,6 +20,7 @@ export function CountryGrid({
   onToggle,
   error,
   disabled,
+  minimum = 2,
 }: CountryGridProps) {
   const [search, setSearch] = useState("");
 
@@ -30,7 +32,7 @@ export function CountryGrid({
 
   const count = selected.size;
   const availableCount = countries.filter((country) => !country.is_knocked_out).length;
-  const meetsMinimum = count >= 4;
+  const meetsMinimum = count >= minimum;
 
   return (
     <div className="flex flex-col gap-3">
@@ -41,7 +43,7 @@ export function CountryGrid({
         </Badge>
         {!meetsMinimum && count > 0 && (
           <span className="text-xs text-muted">
-            {4 - count} more needed
+            {minimum - count} more needed
           </span>
         )}
         <div className="ml-auto">
@@ -87,7 +89,7 @@ export function CountryGrid({
       )}
       {!error && !meetsMinimum && (
         <p className="text-xs text-muted">
-          Select at least 4 countries that are still in the cup to continue.
+          Select at least {minimum} countries that are still in the cup to continue.
         </p>
       )}
     </div>

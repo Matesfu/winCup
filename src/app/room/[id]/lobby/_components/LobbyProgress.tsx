@@ -1,23 +1,39 @@
+import type { AssignmentMode } from "@/lib/types/database";
+
 interface LobbyProgressProps {
   joined: number;
   total: number;
+  assignmentMode: AssignmentMode;
+  chosen: number;
+  isReady: boolean;
 }
 
-export function LobbyProgress({ joined, total }: LobbyProgressProps) {
-  const isFull = joined >= total && total > 0;
-  const pct = total > 0 ? Math.min((joined / total) * 100, 100) : 0;
+export function LobbyProgress({
+  joined,
+  total,
+  assignmentMode,
+  chosen,
+  isReady,
+}: LobbyProgressProps) {
+  const isPlayerChoice = assignmentMode === "player_choice";
+  const progressValue = isPlayerChoice ? chosen : joined;
+  const pct = total > 0 ? Math.min((progressValue / total) * 100, 100) : 0;
+  const label = isPlayerChoice
+    ? `${chosen} of ${total} countries chosen`
+    : `${joined} players joined from ${total} available countries`;
+  const readyText = isPlayerChoice
+    ? "Ready to start. Every player has a country. 🎉"
+    : "Ready to draw. Extra countries can stay unassigned. 🎉";
 
   return (
     <div className="flex flex-col gap-2" data-testid="lobby-progress">
       {/* Counter */}
       <div className="flex items-center justify-between">
-        <span className={`text-sm font-medium ${isFull ? "text-success" : "text-white"}`}>
-          {isFull
-            ? "All players joined! Ready to draw. 🎉"
-            : `${joined} of ${total} players joined`}
+        <span className={`text-sm font-medium ${isReady ? "text-success" : "text-white"}`}>
+          {isReady ? readyText : label}
         </span>
         <span className="tabular-nums text-xs text-muted">
-          {joined}/{total}
+          {progressValue}/{total}
         </span>
       </div>
 
@@ -26,14 +42,14 @@ export function LobbyProgress({ joined, total }: LobbyProgressProps) {
         <div
           data-testid="progress-bar"
           className={`h-full rounded-full transition-all duration-500 ${
-            isFull ? "bg-success" : "bg-gold"
+            isReady ? "bg-success" : "bg-gold"
           }`}
           style={{ width: `${pct}%` }}
           role="progressbar"
-          aria-valuenow={joined}
+          aria-valuenow={progressValue}
           aria-valuemin={0}
           aria-valuemax={total}
-          aria-label={`${joined} of ${total} players joined`}
+          aria-label={label}
         />
       </div>
     </div>

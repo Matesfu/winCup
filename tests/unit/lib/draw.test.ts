@@ -65,7 +65,7 @@ describe("assignCountries()", () => {
   it("every country code appears exactly once (no repeats)", () => {
     const result = assignCountries(PLAYERS, CODES);
     const codes = result.map((a) => a.countryCode);
-    expect(new Set(codes).size).toBe(CODES.length);
+    expect(new Set(codes).size).toBe(PLAYERS.length);
   });
 
   it("all assigned codes come from the input set", () => {
@@ -73,13 +73,19 @@ describe("assignCountries()", () => {
     result.forEach((a) => expect(CODES).toContain(a.countryCode));
   });
 
-  it("throws when player count !== country count", () => {
+  it("allows a larger country pool than the player list", () => {
+    const result = assignCountries(PLAYERS.slice(0, 2), CODES);
+    expect(result).toHaveLength(2);
+    expect(new Set(result.map((a) => a.countryCode)).size).toBe(2);
+  });
+
+  it("throws when there are more players than countries", () => {
     expect(() => assignCountries(PLAYERS, ["ARG", "BRA"])).toThrow();
   });
 
   it("throws with a descriptive message", () => {
     expect(() => assignCountries(PLAYERS, ["ARG"])).toThrow(
-      /Player count.*must equal country count/i
+      /Player count.*less than or equal to country count/i
     );
   });
 

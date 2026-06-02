@@ -26,6 +26,8 @@ export type RoomStatus =
   | "finished";
 
 export type WinRule = "strict" | "last_standing";
+export type RoomVisibility = "public" | "private";
+export type AssignmentMode = "random" | "player_choice";
 
 export type KnockoutStage =
   | "r16"
@@ -53,6 +55,9 @@ export interface Room {
   host_user_id: string;
   host_name: string;
   host_secret: string | null; // only returned to service-role callers
+  room_name: string;
+  visibility: RoomVisibility;
+  assignment_mode: AssignmentMode;
   status: RoomStatus;
   stage_title: string;
   fifa_stage: FifaStage;
@@ -62,6 +67,7 @@ export interface Room {
   external_season_id: number | null;
   winner_player_id: string | null;
   created_at: string;
+  started_at: string | null;
 }
 
 /** Room without the secret field — safe to return to any client */
@@ -116,10 +122,11 @@ export type CountryInsert = Omit<Country, "external_team_id" | "is_knocked_out">
 
 export type RoomInsert = Omit<
   Room,
-  "id" | "created_at" | "winner_player_id" | "host_secret" | "stage_title" | "fifa_stage"
+  "id" | "created_at" | "started_at" | "winner_player_id" | "host_secret" | "stage_title" | "fifa_stage"
 > & {
   stage_title?: string;
   fifa_stage?: FifaStage;
+  started_at?: string | null;
 };
 
 export type PlayerInsert = Omit<Player, "id" | "joined_at">;
