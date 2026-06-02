@@ -28,8 +28,10 @@ export default async function CreateRoomPage() {
   // Fetch all countries — public read, no auth required
   const { data: countries } = await (supabase as any)
     .from("countries")
-    .select("code, name, flag_emoji")
-    .order("name") as { data: Pick<Country, "code" | "name" | "flag_emoji">[] | null };
+    .select("code, name, flag_emoji, is_knocked_out")
+    .order("name") as {
+      data: Pick<Country, "code" | "name" | "flag_emoji" | "is_knocked_out">[] | null;
+    };
 
   return (
     <main className="flex flex-1 flex-col items-center py-10 px-4">

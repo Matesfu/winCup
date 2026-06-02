@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Player, RoomPublic, RoomCountry, RoomTeam, Match } from "@/lib/types/database";
+import type { Player, RoomPublic, RoomCountry, RoomTeam, Match, Country } from "@/lib/types/database";
 
 // ─── subscribeLobby ───────────────────────────────────────────────────────────
 
@@ -76,6 +76,7 @@ export function subscribeRoomUpdates(
 
 export interface GroupStageCallbacks {
   onCountryUpdated: (rc: Partial<RoomCountry>) => void;
+  onCountryStatusUpdated?: (country: Partial<Country>) => void;
   onPlayerUpdated: (player: Partial<Player>) => void;
   onRoomUpdated: (room: Partial<RoomPublic>) => void;
 }
@@ -99,6 +100,12 @@ export function subscribeGroupStage(
       { event: "UPDATE", schema: "public", table: "room_countries", filter: `room_id=eq.${roomId}` },
       (payload: { new: Record<string, unknown> }) =>
         callbacks.onCountryUpdated(payload.new as unknown as Partial<RoomCountry>)
+    )
+    .on(
+      "postgres_changes" as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      { event: "UPDATE", schema: "public", table: "countries" },
+      (payload: { new: Record<string, unknown> }) =>
+        callbacks.onCountryStatusUpdated?.(payload.new as unknown as Partial<Country>)
     )
     .on(
       "postgres_changes" as any, // eslint-disable-line @typescript-eslint/no-explicit-any

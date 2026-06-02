@@ -31,12 +31,12 @@ export default async function DrawPage({ params }: PageProps) {
   const [roomResult, playersResult, countriesResult] = await Promise.all([
     (supabase as any)
       .from("rooms")
-      .select("id,code,status,win_rule,stake_amount,host_user_id")
+      .select("id,code,status,win_rule,stake_amount")
       .eq("id", roomId)
       .maybeSingle() as Promise<{
         data: Pick<
           RoomPublic,
-          "id" | "code" | "status" | "win_rule" | "stake_amount" | "host_user_id"
+          "id" | "code" | "status" | "win_rule" | "stake_amount"
         > | null;
       }>,
     (admin as any)
@@ -68,7 +68,6 @@ export default async function DrawPage({ params }: PageProps) {
 
   const players = playersResult.data ?? [];
   const countries = countriesResult.data ?? [];
-  const isHost = user.id === room.host_user_id;
 
   // Check whether all players have been assigned a country.
   // With the admin client this is always accurate — no RLS timing gap.
@@ -81,7 +80,6 @@ export default async function DrawPage({ params }: PageProps) {
       players={players}
       countries={countries}
       allAssigned={allAssigned}
-      isHost={isHost}
     />
   );
 }

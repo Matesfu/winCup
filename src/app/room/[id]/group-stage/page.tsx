@@ -1,10 +1,25 @@
 import { redirect, notFound } from "next/navigation";
 import { createSessionClient, createAdminClient } from "@/lib/supabase/server";
 import { GroupStageRealtime } from "./_components/GroupStageRealtime";
+import type { FifaStage } from "@/lib/fifa";
 import type { RoomPublic, Player, RoomCountry, Country } from "@/lib/types/database";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+type GroupStageRoom = Pick<
+  RoomPublic,
+  "id" | "code" | "status" | "fifa_stage" | "win_rule" | "stake_amount"
+>;
+
+type QueryError = {
+  code?: string;
+  message?: string;
+};
+
+function isMissingFifaStageError(error: QueryError | null | undefined) {
+  return error?.code === "42703" || error?.message?.includes("fifa_stage");
 }
 
 export const metadata = {
@@ -22,14 +37,15 @@ export default async function GroupStagePage({ params }: PageProps) {
   const admin = createAdminClient();
 
   // Parallel fetches — admin client for member-only RLS tables
-  const [roomResult, playersResult, roomCountriesResult, countriesResult] =
+  const [initialRoomResult, playersResult, roomCountriesResult, countriesResult] =
     await Promise.all([
       (supabase as any)
         .from("rooms")
-        .select("id,code,status,host_user_id,win_rule,stake_amount")
+        .select("id,code,status,fifa_stage,win_rule,stake_amount")
         .eq("id", roomId)
         .maybeSingle() as Promise<{
-          data: Pick<RoomPublic, "id" | "code" | "status" | "host_user_id" | "win_rule" | "stake_amount"> | null;
+          data: GroupStageRoom | null;
+          error: QueryError | null;
         }>,
       (admin as any)
         .from("players")
@@ -46,10 +62,30 @@ export default async function GroupStagePage({ params }: PageProps) {
         }>,
       (supabase as any)
         .from("countries")
-        .select("code,name,flag_emoji") as Promise<{
-          data: Pick<Country, "code" | "name" | "flag_emoji">[] | null;
+        .select("code,name,flag_emoji,is_knocked_out") as Promise<{
+          data: Pick<Country, "code" | "name" | "flag_emoji" | "is_knocked_out">[] | null;
         }>,
     ]);
+
+  let roomResult = initialRoomResult;
+
+  if (!roomResult.data && isMissingFifaStageError(roomResult.error)) {
+    const fallbackRoomResult = await (supabase as any)
+      .from("rooms")
+      .select("id,code,status,win_rule,stake_amount")
+      .eq("id", roomId)
+      .maybeSingle() as {
+        data: Omit<GroupStageRoom, "fifa_stage"> | null;
+        error: QueryError | null;
+      };
+
+    roomResult = {
+      data: fallbackRoomResult.data
+        ? { ...fallbackRoomResult.data, fifa_stage: "First Stage" as FifaStage }
+        : null,
+      error: fallbackRoomResult.error,
+    };
+  }
 
   const room = roomResult.data;
   if (!room) notFound();
@@ -58,14 +94,11 @@ export default async function GroupStagePage({ params }: PageProps) {
   if (room.status === "lobby") redirect(`/room/${roomId}/lobby`);
   if (room.status === "knockout") redirect(`/room/${roomId}/ladder`);
   if (room.status === "finished") redirect(`/room/${roomId}/winner`);
-  // 'drawn' and 'group_stage' both render this page (drawn shows waiting state for non-host)
+  // 'drawn' and 'group_stage' both render this page; no host setup step is required.
 
   const players = playersResult.data ?? [];
   const roomCountries = roomCountriesResult.data ?? [];
   const countries = countriesResult.data ?? [];
-  const isHost = user.id === room.host_user_id;
-
-  const countriesMap = new Map(countries.map((c) => [c.code, c]));
 
   return (
     <GroupStageRealtime
@@ -73,8 +106,7 @@ export default async function GroupStagePage({ params }: PageProps) {
       initialRoom={room}
       initialPlayers={players}
       initialRoomCountries={roomCountries}
-      countriesMap={countriesMap}
-      isHost={isHost}
+      initialCountries={countries}
       currentUserId={user.id}
     />
   );

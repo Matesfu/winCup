@@ -39,7 +39,6 @@ describe("DrawSummary", () => {
         roomId="room-123"
         players={PLAYERS}
         countriesMap={COUNTRIES_MAP}
-        isHost={false}
       />
     );
   });
@@ -76,12 +75,13 @@ describe("DrawSummary", () => {
     expect(screen.getAllByTestId("summary-country-flag")).toHaveLength(PLAYERS.length);
   });
 
-  it("renders the 'Go to Group Stage' link", () => {
+  it("renders the 'Go to Group Stage' button", () => {
     expect(screen.getByTestId("go-to-group-stage")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /go to group stage/i })).toBeInTheDocument();
   });
 
-  it("'Go to Group Stage' href contains /group-stage", () => {
-    const link = screen.getByTestId("go-to-group-stage");
-    expect(link).toHaveAttribute("href", expect.stringContaining("group-stage"));
+  it("submits the room id when entering group stage", () => {
+    const roomInput = document.querySelector<HTMLInputElement>('input[name="roomId"]');
+    expect(roomInput?.value).toBe("room-123");
   });
 });

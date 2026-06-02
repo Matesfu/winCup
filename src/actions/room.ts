@@ -101,14 +101,27 @@ export async function createRoom(
     };
   }
 
-  // 5. Validate country codes exist
+  // 5. Validate country codes exist and are still selectable
   const { data: validCountries } = await (admin as any)
     .from("countries")
-    .select("code")
-    .in("code", countries) as { data: Pick<Country, "code">[] | null };
+    .select("code,name,is_knocked_out")
+    .in("code", countries) as {
+      data: Pick<Country, "code" | "name" | "is_knocked_out">[] | null;
+    };
 
   if (!validCountries || validCountries.length !== countries.length) {
     return { errors: { countries: "One or more country codes are invalid" } };
+  }
+
+  const knockedOutCountries = validCountries.filter((country) => country.is_knocked_out);
+  if (knockedOutCountries.length > 0) {
+    return {
+      errors: {
+        countries: `Remove knocked-out countries: ${knockedOutCountries
+          .map((country) => country.name)
+          .join(", ")}.`,
+      },
+    };
   }
 
   // 6. Generate unique room code (up to 5 retries)
@@ -497,7 +510,7 @@ export async function startDraw(
 export type GroupStageState = { error?: string } | null;
 
 /**
- * Host-only: transitions room from 'drawn' → 'group_stage'.
+ * Room-member action: transitions room from 'drawn' → 'group_stage'.
  * Idempotent — already group_stage → redirect immediately.
  */
 export async function startGroupStage(
@@ -518,7 +531,18 @@ export async function startGroupStage(
     .maybeSingle() as { data: Pick<RoomPublic, "id" | "status" | "host_user_id"> | null };
 
   if (!room) return { error: "Room not found." };
-  if (room.host_user_id !== user.id) return { error: "Only the host can advance the game." };
+  const isHost = room.host_user_id === user.id;
+  if (!isHost) {
+    const { data: player } = await (admin as any)
+      .from("players")
+      .select("id")
+      .eq("room_id", roomId)
+      .eq("user_id", user.id)
+      .maybeSingle() as { data: Pick<Player, "id"> | null };
+
+    if (!player) return { error: "Only players in this room can enter group stage." };
+  }
+
   if (room.status === "group_stage") redirect(`/room/${roomId}/group-stage`);
   if (room.status !== "drawn") return { error: "Room is not in the drawn state." };
 
@@ -530,87 +554,6 @@ export async function startGroupStage(
   if (updateError) return { error: "Failed to start group stage. Please try again." };
 
   redirect(`/room/${roomId}/group-stage`);
-}
-
-// ─── markQualification ────────────────────────────────────────────────────────
-
-export type MarkQualState = { error?: string } | null;
-
-/**
- * Host-only: mark a country as qualified or knocked out.
- * Idempotent — no extra writes if the value is unchanged.
- * Reversible — qualifying a knocked-out country restores the player.
- */
-export async function markQualification(
-  prevState: MarkQualState,
-  formData: FormData
-): Promise<MarkQualState> {
-  const roomId = (formData.get("roomId") as string) ?? "";
-  const countryCode = (formData.get("countryCode") as string) ?? "";
-  const qualifiedStr = (formData.get("qualified") as string) ?? "";
-  const qualified = qualifiedStr === "true";
-
-  const supabase = await createSessionClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { error: "Not authenticated." };
-
-  const admin = createAdminClient();
-
-  // Verify host ownership
-  const { data: room } = await (admin as any)
-    .from("rooms")
-    .select("id, status, host_user_id")
-    .eq("id", roomId)
-    .maybeSingle() as { data: Pick<RoomPublic, "id" | "status" | "host_user_id"> | null };
-
-  if (!room) return { error: "Room not found." };
-  if (room.host_user_id !== user.id) return { error: "Only the host can override qualifications." };
-  if (room.status !== "group_stage") return { error: "Room is not in the group stage." };
-
-  // Verify country belongs to this room
-  const { data: rc } = await (admin as any)
-    .from("room_countries")
-    .select("id, qualified")
-    .eq("room_id", roomId)
-    .eq("country_code", countryCode)
-    .maybeSingle() as { data: { id: string; qualified: boolean | null } | null };
-
-  if (!rc) return { error: "Country not found in this room." };
-
-  // Update qualification status
-  const { error: rcError } = await (admin as any)
-    .from("room_countries")
-    .update({ qualified })
-    .eq("room_id", roomId)
-    .eq("country_code", countryCode) as { error: unknown };
-
-  if (rcError) return { error: "Failed to update qualification. Please try again." };
-
-  // Sync player elimination status
-  const { data: player } = await (admin as any)
-    .from("players")
-    .select("id, is_eliminated")
-    .eq("room_id", roomId)
-    .eq("assigned_country", countryCode)
-    .maybeSingle() as { data: Pick<Player, "id" | "is_eliminated"> | null };
-
-  if (player) {
-    if (!qualified && !player.is_eliminated) {
-      // Knocked out → eliminate player
-      await (admin as any)
-        .from("players")
-        .update({ is_eliminated: true })
-        .eq("id", player.id);
-    } else if (qualified && player.is_eliminated) {
-      // Qualified (reversal) → restore player
-      await (admin as any)
-        .from("players")
-        .update({ is_eliminated: false })
-        .eq("id", player.id);
-    }
-  }
-
-  return null; // success — Realtime UPDATE events update the UI
 }
 
 // ─── buildKnockout ────────────────────────────────────────────────────────────

@@ -50,4 +50,16 @@ describe("CountryCard", () => {
     render(<CountryCard {...PROPS} disabled={true} />);
     expect(screen.getByRole("checkbox")).toBeDisabled();
   });
+
+  it("is disabled and does not toggle when knocked out", () => {
+    render(<CountryCard {...PROPS} knockedOut={true} />);
+    const card = screen.getByRole("checkbox", {
+      name: "Argentina is knocked out and cannot be selected",
+    });
+
+    expect(card).toBeDisabled();
+    expect(screen.getByText("Out")).toBeInTheDocument();
+    fireEvent.click(card);
+    expect(PROPS.onToggle).not.toHaveBeenCalled();
+  });
 });

@@ -13,7 +13,7 @@ import { ALLOWED_AVATARS } from "@/lib/constants";
 import type { WinRule, Country } from "@/lib/types/database";
 
 interface CreateRoomFormProps {
-  countries: Pick<Country, "code" | "name" | "flag_emoji">[];
+  countries: Pick<Country, "code" | "name" | "flag_emoji" | "is_knocked_out">[];
   defaultHostName?: string;
 }
 
@@ -33,6 +33,9 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
   const [hostIsPlaying, setHostIsPlaying] = useState(true);
 
   function toggleCountry(code: string) {
+    const country = countries.find((candidate) => candidate.code === code);
+    if (country?.is_knocked_out) return;
+
     setSelectedCountries((prev) => {
       const next = new Set(prev);
       if (next.has(code)) next.delete(code);

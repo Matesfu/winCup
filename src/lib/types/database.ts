@@ -4,6 +4,8 @@
  *   supabase gen types typescript --local > src/lib/types/database.ts
  */
 
+import type { FifaStage } from "@/lib/fifa";
+
 // ─── Profile ─────────────────────────────────────────────────────────────────
 
 export interface Profile {
@@ -42,6 +44,7 @@ export interface Country {
   name: string;
   flag_emoji: string;
   external_team_id: number | null;
+  is_knocked_out: boolean;
 }
 
 export interface Room {
@@ -51,6 +54,8 @@ export interface Room {
   host_name: string;
   host_secret: string | null; // only returned to service-role callers
   status: RoomStatus;
+  stage_title: string;
+  fifa_stage: FifaStage;
   win_rule: WinRule;
   stake_amount: number | null;
   external_competition_id: number | null;
@@ -104,14 +109,18 @@ export interface Match {
 
 // ─── Insert types (subset of fields required for INSERT) ────────────────────
 
-export type CountryInsert = Omit<Country, "external_team_id"> & {
+export type CountryInsert = Omit<Country, "external_team_id" | "is_knocked_out"> & {
   external_team_id?: number | null;
+  is_knocked_out?: boolean;
 };
 
 export type RoomInsert = Omit<
   Room,
-  "id" | "created_at" | "winner_player_id" | "host_secret"
->;
+  "id" | "created_at" | "winner_player_id" | "host_secret" | "stage_title" | "fifa_stage"
+> & {
+  stage_title?: string;
+  fifa_stage?: FifaStage;
+};
 
 export type PlayerInsert = Omit<Player, "id" | "joined_at">;
 

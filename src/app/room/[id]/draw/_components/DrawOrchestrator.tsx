@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MuteToggle } from "./MuteToggle";
 import { RevealScreen } from "./RevealScreen";
@@ -16,15 +16,13 @@ interface CountryInfo {
   flag_emoji: string;
 }
 
-interface DrawPlayer
-  extends Pick<Player, "id" | "name" | "avatar_emoji" | "assigned_country"> {}
+type DrawPlayer = Pick<Player, "id" | "name" | "avatar_emoji" | "assigned_country">;
 
 interface DrawOrchestratorProps {
   roomId: string;
   players: DrawPlayer[];
   countries: CountryInfo[];
   allAssigned: boolean;
-  isHost: boolean;
 }
 
 const WAIT_BEFORE_FIRST_REVEAL_MS = 1200;
@@ -34,7 +32,6 @@ export function DrawOrchestrator({
   players,
   countries,
   allAssigned,
-  isHost,
 }: DrawOrchestratorProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<DrawPhase>("waiting");
@@ -44,7 +41,7 @@ export function DrawOrchestrator({
   // Build a map for O(1) country lookups
   const countriesMap = new Map(countries.map((c) => [c.code, c]));
 
-  // Subscription to room status changes (e.g. host advances to group stage)
+  // Subscription to room status changes (e.g. room enters group stage)
   useEffect(() => {
     const unsubscribe = subscribeRoomUpdates(roomId, (updated) => {
       if (updated.status === "group_stage") {
@@ -132,7 +129,6 @@ export function DrawOrchestrator({
           roomId={roomId}
           players={players}
           countriesMap={countriesMap}
-          isHost={isHost}
         />
       )}
     </div>

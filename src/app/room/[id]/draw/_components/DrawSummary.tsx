@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState } from "react";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
@@ -13,16 +12,15 @@ interface CountryInfo {
   flag_emoji: string;
 }
 
-interface DrawPlayer extends Pick<Player, "id" | "name" | "avatar_emoji" | "assigned_country"> {}
+type DrawPlayer = Pick<Player, "id" | "name" | "avatar_emoji" | "assigned_country">;
 
 interface DrawSummaryProps {
   roomId: string;
   players: DrawPlayer[];
   countriesMap: Map<string, CountryInfo>;
-  isHost: boolean;
 }
 
-export function DrawSummary({ roomId, players, countriesMap, isHost }: DrawSummaryProps) {
+export function DrawSummary({ roomId, players, countriesMap }: DrawSummaryProps) {
   const [state, formAction, isPending] = useActionState<GroupStageState, FormData>(
     startGroupStage,
     null
@@ -83,40 +81,29 @@ export function DrawSummary({ roomId, players, countriesMap, isHost }: DrawSumma
         })}
       </div>
 
-      {/* CTA — host: action form; non-host: plain link */}
-      {isHost ? (
-        <form action={formAction} className="w-full max-w-xs">
-          <input type="hidden" name="roomId" value={roomId} />
-          {state?.error && (
-            <p className="mb-2 text-center text-xs text-danger">{state.error}</p>
-          )}
-          <Button
-            type="submit"
-            variant="primary"
-            size="lg"
-            fullWidth
-            disabled={isPending}
-            data-testid="go-to-group-stage"
-          >
-            {isPending ? (
-              <span className="flex items-center gap-2">
-                <LoadingSpinner size="sm" color="white" />
-                Starting…
-              </span>
-            ) : (
-              "Go to Group Stage →"
-            )}
-          </Button>
-        </form>
-      ) : (
-        <Link
-          href={`/room/${roomId}/group-stage`}
-          className="inline-flex items-center gap-2 rounded-2xl border border-gold/50 px-8 py-4 text-base font-bold text-gold transition-all hover:bg-gold/10"
+      <form action={formAction} className="w-full max-w-xs">
+        <input type="hidden" name="roomId" value={roomId} />
+        {state?.error && (
+          <p className="mb-2 text-center text-xs text-danger">{state.error}</p>
+        )}
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={isPending}
           data-testid="go-to-group-stage"
         >
-          Go to Group Stage →
-        </Link>
-      )}
+          {isPending ? (
+            <span className="flex items-center gap-2">
+              <LoadingSpinner size="sm" color="white" />
+              Starting…
+            </span>
+          ) : (
+            "Go to Group Stage →"
+          )}
+        </Button>
+      </form>
 
       <p className="max-w-sm text-center text-xs text-muted/60">
         WinCup is for entertainment only. It does not handle, hold, or process any payments.

@@ -6,8 +6,6 @@ jest.mock("@/actions/room", () => ({
   createRoom: jest.fn(),
 }));
 
-// Mock useActionState to capture the action function
-let capturedAction: ((formData: FormData) => Promise<unknown>) | null = null;
 jest.mock("react", () => {
   const actual = jest.requireActual("react");
   return {
@@ -16,7 +14,6 @@ jest.mock("react", () => {
       action: (prevState: unknown, formData: FormData) => Promise<unknown>,
       initial: unknown
     ) => {
-      capturedAction = (fd: FormData) => action(initial, fd);
       return [initial, (fd: FormData) => action(initial, fd), false];
     },
   };
@@ -35,7 +32,7 @@ const COUNTRIES = [
 function renderForm(props = {}) {
   return render(
     <CreateRoomForm
-      countries={COUNTRIES}
+      countries={COUNTRIES.map((country) => ({ ...country, is_knocked_out: false }))}
       defaultHostName="golazo99"
       {...props}
     />
@@ -90,5 +87,17 @@ describe("CreateRoomForm", () => {
     expect(screen.getByText("2. Win Rule")).toBeInTheDocument();
     expect(screen.getByText("3. Pick Countries")).toBeInTheDocument();
     expect(screen.getByText("4. Stake (Optional)")).toBeInTheDocument();
+  });
+
+  it("does not select knocked-out countries", () => {
+    renderForm({
+      countries: [
+        ...COUNTRIES.slice(0, 4).map((country) => ({ ...country, is_knocked_out: false })),
+        { code: "ITA", name: "Italy", flag_emoji: "🇮🇹", is_knocked_out: true },
+      ],
+    });
+
+    fireEvent.click(screen.getByTestId("country-card-ITA"));
+    expect(screen.getByText(/Selected: 0/)).toBeInTheDocument();
   });
 });

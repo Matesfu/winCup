@@ -6,7 +6,7 @@ import { CountryCard } from "./CountryCard";
 import type { Country } from "@/lib/types/database";
 
 interface CountryGridProps {
-  countries: Pick<Country, "code" | "name" | "flag_emoji">[];
+  countries: Pick<Country, "code" | "name" | "flag_emoji" | "is_knocked_out">[];
   selected: Set<string>;
   onToggle: (code: string) => void;
   error?: string;
@@ -29,6 +29,7 @@ export function CountryGrid({
     : countries;
 
   const count = selected.size;
+  const availableCount = countries.filter((country) => !country.is_knocked_out).length;
   const meetsMinimum = count >= 4;
 
   return (
@@ -36,7 +37,7 @@ export function CountryGrid({
       {/* Counter + search row */}
       <div className="flex items-center gap-3">
         <Badge variant={meetsMinimum ? "gold" : "default"}>
-          Selected: {count} / {countries.length}
+          Selected: {count} / {availableCount}
         </Badge>
         {!meetsMinimum && count > 0 && (
           <span className="text-xs text-muted">
@@ -69,7 +70,8 @@ export function CountryGrid({
             flagEmoji={country.flag_emoji}
             selected={selected.has(country.code)}
             onToggle={onToggle}
-            disabled={disabled}
+            disabled={disabled || country.is_knocked_out}
+            knockedOut={country.is_knocked_out}
           />
         ))}
         {filtered.length === 0 && (
@@ -85,7 +87,7 @@ export function CountryGrid({
       )}
       {!error && !meetsMinimum && (
         <p className="text-xs text-muted">
-          Select at least 4 countries to continue.
+          Select at least 4 countries that are still in the cup to continue.
         </p>
       )}
     </div>
