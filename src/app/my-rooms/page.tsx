@@ -90,10 +90,10 @@ export default async function MyRoomsPage({ searchParams }: MyRoomsPageProps) {
 
   return (
     <AppShell userLabel={userLabel}>
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8">
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
+      <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-6 px-4 py-6 sm:py-8">
+        <section className="flex min-w-0 flex-col gap-4">
+          <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-gold">
                 My Rooms
               </p>
@@ -104,33 +104,33 @@ export default async function MyRoomsPage({ searchParams }: MyRoomsPageProps) {
                 Search by room name or code, then filter by hosted, joined, active, or finished.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex">
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex">
               <Link
                 href="/room/create"
-                className="inline-flex items-center justify-center rounded-2xl bg-gold px-4 py-3 text-sm font-black text-black transition-colors hover:brightness-110"
+                className="inline-flex min-w-0 items-center justify-center rounded-2xl bg-gold px-4 py-3 text-sm font-black text-black transition-colors hover:brightness-110"
               >
                 + Create
               </Link>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center justify-center rounded-2xl border border-gold/40 px-4 py-3 text-sm font-bold text-gold transition-colors hover:bg-gold/10"
+                className="inline-flex min-w-0 items-center justify-center rounded-2xl border border-gold/40 px-4 py-3 text-sm font-bold text-gold transition-colors hover:bg-gold/10"
               >
                 Discover
               </Link>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-white/8 bg-surface p-3">
-              <p className="text-xs text-muted">Hosted</p>
+          <div className="grid min-w-0 grid-cols-3 gap-2">
+            <div className="min-w-0 rounded-2xl border border-white/8 bg-surface p-3">
+              <p className="truncate text-xs text-muted">Hosted</p>
               <p className="mt-1 text-xl font-black text-white">{hostedCount}</p>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-surface p-3">
-              <p className="text-xs text-muted">Joined</p>
+            <div className="min-w-0 rounded-2xl border border-white/8 bg-surface p-3">
+              <p className="truncate text-xs text-muted">Joined</p>
               <p className="mt-1 text-xl font-black text-white">{joinedCount}</p>
             </div>
-            <div className="rounded-2xl border border-white/8 bg-surface p-3">
-              <p className="text-xs text-muted">Active</p>
+            <div className="min-w-0 rounded-2xl border border-white/8 bg-surface p-3">
+              <p className="truncate text-xs text-muted">Active</p>
               <p className="mt-1 text-xl font-black text-white">{activeCount}</p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export default async function MyRoomsPage({ searchParams }: MyRoomsPageProps) {
           <MyRoomsControls filters={filters} />
         </section>
 
-        <section className="flex flex-col gap-3">
+        <section className="flex min-w-0 flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-bold uppercase tracking-widest text-muted">
               Results ({filteredRooms.length})
@@ -151,7 +151,7 @@ export default async function MyRoomsPage({ searchParams }: MyRoomsPageProps) {
           </div>
 
           {filteredRooms.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex min-w-0 flex-col gap-3">
               {filteredRooms.map((room) => (
                 <RoomCard key={room.id} room={room} />
               ))}

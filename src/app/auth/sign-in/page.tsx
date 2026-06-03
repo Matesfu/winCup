@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createSessionClient } from "@/lib/supabase/server";
+import { PageBackdrop } from "@/components/ui/PageBackdrop";
 import { SignInForm } from "./_components/SignInForm";
 
 interface SignInPageProps {
@@ -24,15 +25,16 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <main className="relative flex min-h-screen flex-1 flex-col items-center justify-center px-4 py-16">
+      <PageBackdrop imageSrc="/world-cup-2.jpg" />
       <Link
         href="/"
-        className="absolute left-4 top-4 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-surface px-4 py-2 text-sm font-bold text-white transition-colors hover:border-gold/50 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 sm:left-6 sm:top-6"
+        className="absolute left-4 top-4 z-10 inline-flex min-h-11 items-center gap-2 rounded-2xl border border-white/10 bg-surface px-4 py-2 text-sm font-bold text-white transition-colors hover:border-gold/50 hover:text-gold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 sm:left-6 sm:top-6"
         aria-label="Go back to home"
       >
         <span aria-hidden="true">←</span>
         Back
       </Link>
-      <div className="w-full max-w-md">
+      <div className="relative z-10 w-full max-w-md">
         {/* Header */}
         <div className="mb-8 text-center">
           <div className="mb-3 text-5xl">🏆</div>
