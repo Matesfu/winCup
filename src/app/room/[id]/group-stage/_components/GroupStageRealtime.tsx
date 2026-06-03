@@ -140,7 +140,7 @@ export function GroupStageRealtime({
                 {fifaStage}
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-muted">
-                Stage and country status sync from Supabase. Update the database and everyone sees it live.
+                Follow each player&apos;s country status.
               </p>
             </div>
             <div className="flex gap-2 text-xs text-muted">

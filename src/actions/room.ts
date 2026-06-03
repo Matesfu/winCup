@@ -399,7 +399,7 @@ export async function lookupRoomByCode(
 
   if (queryError) {
     console.error("[lookupRoomByCode] Supabase error:", queryError);
-    return { error: "Could not look up room. Check your Supabase connection and try again." };
+    return { error: "Could not look up room. Check the code and try again." };
   }
 
   if (!room) return { error: "Room not found. Check the code and try again." };
