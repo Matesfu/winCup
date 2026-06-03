@@ -36,7 +36,7 @@ export function RoomCard({ room }: RoomCardProps) {
 
   return (
     <article
-      className="group relative flex flex-col gap-4 rounded-3xl border border-white/8 bg-surface p-4 transition-all hover:border-gold/30 sm:flex-row sm:items-center sm:gap-5"
+      className="group relative flex w-full min-w-0 flex-col gap-4 rounded-3xl border border-white/8 bg-surface p-4 transition-all hover:border-gold/30 sm:flex-row sm:items-center sm:gap-5"
       data-testid="room-card"
     >
       <div className="flex min-w-0 flex-1 flex-col gap-3">

@@ -62,9 +62,9 @@ export function MyRoomsControls({ filters }: MyRoomsControlsProps) {
   const hasFilters = hasMyRoomFilters(filters);
 
   return (
-    <div className="flex flex-col gap-5">
-      <form method="get" className="rounded-3xl border border-white/8 bg-surface p-4">
-        <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-center">
+    <div className="flex w-full min-w-0 flex-col gap-5">
+      <form method="get" className="w-full min-w-0 rounded-3xl border border-white/8 bg-surface p-4">
+        <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-center">
           <label className="sr-only" htmlFor="my-room-search">
             Search my rooms
           </label>
@@ -152,8 +152,8 @@ export function MyRoomsControls({ filters }: MyRoomsControlsProps) {
         </details>
       </form>
 
-      <div className="rounded-3xl border border-white/8 bg-surface/60 p-3">
-        <div className="flex gap-2 overflow-x-auto px-1 pb-4 pt-1">
+      <div className="w-full min-w-0 rounded-3xl border border-white/8 bg-surface/60 p-3">
+        <div className="flex max-w-full gap-2 overflow-x-auto px-1 pb-4 pt-1">
           <Chip href={buildMyRoomsHref(filters, { role: "" })} active={filters.role === "all"}>
             All
           </Chip>
