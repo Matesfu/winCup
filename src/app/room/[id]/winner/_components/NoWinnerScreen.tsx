@@ -4,14 +4,12 @@ interface NoWinnerScreenProps {
   championCountryName: string;
   championCountryFlag: string;
   stakeAmount: number | null;
-  roomCode: string;
 }
 
 export function NoWinnerScreen({
   championCountryName,
   championCountryFlag,
   stakeAmount,
-  roomCode,
 }: NoWinnerScreenProps) {
   const shareText = `⚽ ${championCountryFlag} ${championCountryName} won the tournament! We played WinCup but nobody owned them. Better luck next time! 🤷`;
 
@@ -30,7 +28,7 @@ export function NoWinnerScreen({
           className="text-sm italic text-muted"
           data-testid="no-winner-message"
         >
-          The Cup winner wasn&apos;t in this room — stakes returned 🤷
+          The Cup winner wasn&apos;t in this room, stakes returned 🤷
         </p>
       </div>
 
@@ -51,7 +49,7 @@ export function NoWinnerScreen({
           {championCountryName}
         </span>
         <p className="text-xs text-muted">
-          Congratulations to {championCountryName} — they were not in this room!
+          Congratulations to {championCountryName}, they were not in this room!
         </p>
       </div>
 
@@ -59,7 +57,7 @@ export function NoWinnerScreen({
       {stakeAmount !== null && (
         <div className="animate-slide-up rounded-xl border border-white/10 bg-surface/60 px-5 py-3 text-center">
           <p className="text-sm text-muted">
-            No one wins the £{stakeAmount} pot.{" "}
+            No one wins the {stakeAmount} Birr pot.{" "}
             <span className="text-white">Stakes returned to everyone.</span>
           </p>
         </div>
@@ -86,10 +84,6 @@ export function NoWinnerScreen({
         Start New Room →
       </Link>
 
-      {/* Disclaimer */}
-      <p className="max-w-sm text-xs text-muted/50">
-        WinCup is for entertainment only. It does not handle, hold, or process any payments.
-      </p>
     </main>
   );
 }

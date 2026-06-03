@@ -87,15 +87,18 @@ describe("Validation.hostName()", () => {
 // ── stakeAmount ───────────────────────────────────────────────────────────────
 
 describe("Validation.stakeAmount()", () => {
-  it("accepts empty string (optional)", () => {
-    expect(Validation.stakeAmount("")).toBeNull();
+  it("rejects empty string", () => {
+    expect(Validation.stakeAmount("")).not.toBeNull();
   });
-  it("accepts whitespace-only (optional)", () => {
-    expect(Validation.stakeAmount("   ")).toBeNull();
+  it("rejects whitespace-only", () => {
+    expect(Validation.stakeAmount("   ")).not.toBeNull();
   });
   it("accepts valid positive number", () => {
     expect(Validation.stakeAmount("10")).toBeNull();
     expect(Validation.stakeAmount("9.99")).toBeNull();
+  });
+  it("rejects zero", () => {
+    expect(Validation.stakeAmount("0")).not.toBeNull();
   });
   it("rejects negative number", () => {
     expect(Validation.stakeAmount("-5")).not.toBeNull();

@@ -37,9 +37,9 @@ export const Validation = {
   },
 
   stakeAmount(value: string): string | null {
-    if (!value || value.trim() === "") return null; // optional
+    if (!value || value.trim() === "") return "Stake amount is required";
     const n = Number(value);
-    if (isNaN(n) || n < 0) return "Stake must be a positive number";
+    if (isNaN(n) || n <= 0) return "Stake must be greater than 0";
     return null;
   },
 

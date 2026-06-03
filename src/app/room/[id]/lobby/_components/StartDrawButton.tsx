@@ -26,7 +26,7 @@ export function StartDrawButton({
   const isPlayerChoice = assignmentMode === "player_choice";
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex w-full flex-col items-center gap-2">
       <form action={formAction} className="w-full">
         <input type="hidden" name="roomId" value={roomId} />
         <Button

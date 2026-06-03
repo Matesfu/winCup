@@ -6,7 +6,6 @@ const BASE_PROPS = {
   championCountryName: "Argentina",
   championCountryFlag: "🇦🇷",
   stakeAmount: 10,
-  roomCode: "WC-AB23",
 };
 
 describe("NoWinnerScreen", () => {
@@ -44,13 +43,13 @@ describe("NoWinnerScreen", () => {
 describe("NoWinnerScreen — with stake amount", () => {
   it("shows stake amount note when stakeAmount is non-null", () => {
     render(<NoWinnerScreen {...BASE_PROPS} stakeAmount={20} />);
-    expect(screen.getByText(/£20/)).toBeInTheDocument();
+    expect(screen.getByText(/20 Birr/)).toBeInTheDocument();
     // "Stakes returned" appears in both the message and the stake section — use getAllByText
     expect(screen.getAllByText(/stakes returned/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("no stake section when stakeAmount is null", () => {
     render(<NoWinnerScreen {...BASE_PROPS} stakeAmount={null} />);
-    expect(screen.queryByText(/£/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Birr/)).not.toBeInTheDocument();
   });
 });

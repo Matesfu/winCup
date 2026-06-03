@@ -5,6 +5,7 @@ import Link from "next/link";
 import { JoinCodeInput } from "@/components/ui/JoinCodeInput";
 import { Button } from "@/components/ui/Button";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { HistoryBackButton } from "@/components/ui/HistoryBackButton";
 import { lookupRoomByCode, type LookupRoomState } from "@/actions/room";
 
 export default function JoinRoomPage() {
@@ -15,7 +16,8 @@ export default function JoinRoomPage() {
   );
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-4 py-16">
+    <main className="relative flex min-h-screen flex-1 flex-col items-center justify-center px-4 py-16">
+      <HistoryBackButton fallbackHref="/dashboard" />
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="mb-8 text-center">

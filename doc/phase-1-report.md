@@ -105,7 +105,7 @@ Shared validators (return `string | null`) used by both Server Actions and clien
 | `CountryCard` | Flag + name, gold glow on selected, gold checkmark, `role="checkbox"` |
 | `CountryGrid` | Responsive 3/4/6-col grid, live counter badge, search filter, minimum requirement hint |
 | `HostNameInput` | Name input + avatar preview (selected emoji shown large) + EmojiPicker |
-| `StakeInput` | Optional numeric input with £ prefix and payment disclaimer |
+| `StakeInput` | Optional numeric input with Birr label and payment disclaimer |
 | `CreateRoomForm` | Orchestrator Client Component; hidden inputs carry state; 4 FormSections; submit disabled until ≥4 countries + non-empty name |
 
 ### 8. `createRoom` Server Action (`src/actions/room.ts`)

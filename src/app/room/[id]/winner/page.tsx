@@ -8,6 +8,16 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+interface SupabaseQuery<TResult> extends PromiseLike<TResult> {
+  select(columns: string): SupabaseQuery<TResult>;
+  eq(column: string, value: string): SupabaseQuery<TResult>;
+  maybeSingle(): Promise<TResult>;
+}
+
+interface SupabaseReader {
+  from<TResult>(table: string): SupabaseQuery<TResult>;
+}
+
 export const metadata = {
   title: "Winner — WinCup",
 };
@@ -21,28 +31,30 @@ export default async function WinnerPage({ params }: PageProps) {
   if (!user) redirect(`/auth/sign-in?redirectTo=/room/${roomId}/winner`);
 
   const admin = createAdminClient();
+  const sessionDb = supabase as unknown as SupabaseReader;
+  const adminDb = admin as unknown as SupabaseReader;
 
   // Parallel fetches — admin client for member-only RLS tables
   const [roomResult, champTeamResult] = await Promise.all([
-    (supabase as any)
-      .from("rooms")
-      .select("id,code,status,host_user_id,win_rule,stake_amount,winner_player_id")
-      .eq("id", roomId)
-      .maybeSingle() as Promise<{
+    sessionDb
+      .from<{
         data: Pick<
           RoomPublic,
           "id" | "code" | "status" | "host_user_id" | "win_rule" | "stake_amount" | "winner_player_id"
         > | null;
-      }>,
+      }>("rooms")
+      .select("id,code,status,host_user_id,win_rule,stake_amount,winner_player_id")
+      .eq("id", roomId)
+      .maybeSingle(),
     // Champion team — to show "which country actually won" for no-winner screen
-    (admin as any)
-      .from("room_teams")
+    adminDb
+      .from<{
+        data: Pick<RoomTeam, "country_code" | "player_id"> | null;
+      }>("room_teams")
       .select("country_code, player_id")
       .eq("room_id", roomId)
       .eq("current_stage", "champion")
-      .maybeSingle() as Promise<{
-        data: Pick<RoomTeam, "country_code" | "player_id"> | null;
-      }>,
+      .maybeSingle(),
   ]);
 
   const room = roomResult.data;
@@ -60,22 +72,22 @@ export default async function WinnerPage({ params }: PageProps) {
   // Fetch winner player (if any) and country info in parallel
   const [winnerPlayerResult, champCountryResult] = await Promise.all([
     room.winner_player_id
-      ? (admin as any)
-          .from("players")
+      ? adminDb
+          .from<{
+            data: Pick<Player, "id" | "name" | "avatar_emoji" | "assigned_country"> | null;
+          }>("players")
           .select("id,name,avatar_emoji,assigned_country")
           .eq("id", room.winner_player_id)
-          .maybeSingle() as Promise<{
-            data: Pick<Player, "id" | "name" | "avatar_emoji" | "assigned_country"> | null;
-          }>
+          .maybeSingle()
       : Promise.resolve({ data: null }),
     champTeam?.country_code
-      ? (supabase as any)
-          .from("countries")
+      ? sessionDb
+          .from<{
+            data: Pick<Country, "code" | "name" | "flag_emoji"> | null;
+          }>("countries")
           .select("code,name,flag_emoji")
           .eq("code", champTeam.country_code)
-          .maybeSingle() as Promise<{
-            data: Pick<Country, "code" | "name" | "flag_emoji"> | null;
-          }>
+          .maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -85,11 +97,13 @@ export default async function WinnerPage({ params }: PageProps) {
   // Fetch winner's country separately when winner exists
   let winnerCountry: Pick<Country, "code" | "name" | "flag_emoji"> | null = null;
   if (winnerPlayer?.assigned_country) {
-    const { data: wc } = await (supabase as any)
-      .from("countries")
+    const { data: wc } = await sessionDb
+      .from<{
+        data: Pick<Country, "code" | "name" | "flag_emoji"> | null;
+      }>("countries")
       .select("code,name,flag_emoji")
       .eq("code", winnerPlayer.assigned_country)
-      .maybeSingle() as { data: Pick<Country, "code" | "name" | "flag_emoji"> | null };
+      .maybeSingle();
     winnerCountry = wc;
   }
 
@@ -108,7 +122,6 @@ export default async function WinnerPage({ params }: PageProps) {
             ? "Champion's owner wins the pot! 🏆"
             : "Last team standing wins! 🏆"
         }
-        roomCode={room.code}
       />
     );
   }
@@ -119,7 +132,6 @@ export default async function WinnerPage({ params }: PageProps) {
       championCountryName={champCountry?.name ?? "The champion"}
       championCountryFlag={champCountry?.flag_emoji ?? "🏆"}
       stakeAmount={room.stake_amount}
-      roomCode={room.code}
     />
   );
 }

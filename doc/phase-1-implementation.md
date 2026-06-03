@@ -466,7 +466,7 @@ Manages the full country selection experience:
 
 Optional numeric input for the stake amount:
 - Placeholder: "e.g. 10"
-- Prefix: currency symbol (£ / $ — plain text, not enforced)
+- Prefix: currency label (Birr, plain text, not enforced)
 - Disclaimer below: "Display only — WinCup does not handle payments."
 - Validates: positive number or empty (blank = no stake)
 
@@ -589,7 +589,7 @@ A **Client Component** that owns all create-room form state. No auth logic neede
 │  ...                            │
 ├─────────────────────────────────┤
 │ ── 4. Stake (Optional) ───────  │
-│  £ [_____] (display only)       │
+│  Birr [_____] (display only)    │
 ├─────────────────────────────────┤
 │ [Create Room]  ← disabled <4   │
 └─────────────────────────────────┘

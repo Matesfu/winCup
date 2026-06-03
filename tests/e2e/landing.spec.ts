@@ -42,14 +42,14 @@ test.describe("Landing Page", () => {
     await expect(steps).toHaveCount(3);
   });
 
-  test("entertainment-only disclaimer is visible in footer", async ({ page }) => {
-    await expect(page.getByText(/entertainment only/i)).toBeVisible();
+  test("room experience summary is visible in footer", async ({ page }) => {
+    await expect(page.getByText(/Create public or private World Cup rooms/i)).toBeVisible();
   });
 
-  test("no-payments disclaimer is present", async ({ page }) => {
+  test("old unsupported-payment disclaimer is not present", async ({ page }) => {
     await expect(
       page.getByText(/does not handle.*payments/i)
-    ).toBeVisible();
+    ).toHaveCount(0);
   });
 
   test("no JavaScript console errors on load", async ({ page }) => {

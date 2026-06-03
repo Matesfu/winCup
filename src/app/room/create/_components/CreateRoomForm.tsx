@@ -50,13 +50,28 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
     if (wasSelected && hostCountryCode === code) setHostCountryCode("");
   }
 
+  function selectAllAvailableCountries() {
+    const availableCountryCodes = countries
+      .filter((country) => !country.is_knocked_out)
+      .map((country) => country.code);
+
+    setSelectedCountries(new Set(availableCountryCodes));
+  }
+
+  function clearSelectedCountries() {
+    setSelectedCountries(new Set());
+    setHostCountryCode("");
+  }
+
   const selectedCountryOptions = countries.filter(
     (country) => selectedCountries.has(country.code) && !country.is_knocked_out
   );
   const needsHostCountry = assignmentMode === "player_choice" && hostIsPlaying;
+  const hasValidStake = stakeAmount.trim().length > 0 && Number(stakeAmount) > 0;
   const canSubmit =
     roomName.trim().length > 0 &&
     hostName.trim().length > 0 &&
+    hasValidStake &&
     selectedCountries.size >= 2 &&
     (!needsHostCountry || hostCountryCode.length > 0);
 
@@ -248,6 +263,8 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
           countries={countries}
           selected={selectedCountries}
           onToggle={toggleCountry}
+          onSelectAll={selectAllAvailableCountries}
+          onClearAll={clearSelectedCountries}
           error={state?.errors?.countries}
           disabled={isPending}
           minimum={2}
@@ -282,10 +299,10 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
         </FormSection>
       )}
 
-      {/* Section 7 — Optional stake */}
+      {/* Section 7 — Required stake */}
       <FormSection
-        title={needsHostCountry ? "7. Stake (Optional)" : "6. Stake (Optional)"}
-        description="Set a display amount for the pot. WinCup does not process payments."
+        title={needsHostCountry ? "7. Stake" : "6. Stake"}
+        description="Set the stake amount players must see before joining this room."
       >
         <StakeInput
           value={stakeAmount}
@@ -320,9 +337,11 @@ export function CreateRoomForm({ countries, defaultHostName = "" }: CreateRoomFo
             ? "Enter a display name to continue."
             : roomName.trim().length === 0
               ? "Enter a room name to continue."
-              : needsHostCountry && hostCountryCode.length === 0
-                ? "Choose your country to continue."
-                : "Select at least 2 countries to continue."}
+              : !hasValidStake
+                ? "Enter a stake amount greater than 0 to continue."
+                : needsHostCountry && hostCountryCode.length === 0
+                  ? "Choose your country to continue."
+                  : "Select at least 2 countries to continue."}
         </p>
       )}
     </form>
