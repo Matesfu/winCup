@@ -101,7 +101,7 @@ export function LobbyRealtime({
       if (!nextPath) return;
 
       hasRedirectedRef.current = true;
-      router.push(nextPath);
+      router.replace(nextPath);
     },
     [roomId, router]
   );

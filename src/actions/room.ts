@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, RedirectType } from "next/navigation";
 import { cookies } from "next/headers";
 import { createSessionClient, createAdminClient } from "@/lib/supabase/server";
 import { generateRoomCode } from "@/lib/room-code";
@@ -268,7 +268,7 @@ export async function createRoom(
   }
 
   // 11. Navigate to the lobby
-  redirect(`/room/${room.id}/lobby`);
+  redirect(`/room/${room.id}/lobby`, RedirectType.replace);
 }
 
 // ─── kickPlayer ───────────────────────────────────────────────────────────────
@@ -372,7 +372,7 @@ export async function lookupRoomByCode(
     path: `/room/${room.id}`,
   });
 
-  redirect(`/room/${room.id}/join`);
+  redirect(`/room/${room.id}/join`, RedirectType.replace);
 }
 
 // ─── joinRoom ─────────────────────────────────────────────────────────────────
@@ -457,7 +457,7 @@ export async function joinRoom(
 
   // 5. Duplicate-join check — already in this room
   const alreadyJoined = playerList.some((p) => p.user_id === user.id);
-  if (alreadyJoined) redirect(`/room/${roomId}/lobby`);
+  if (alreadyJoined) redirect(`/room/${roomId}/lobby`, RedirectType.replace);
 
   if (room.visibility === "private" && room.host_user_id !== user.id) {
     const cookieStore = await cookies();
@@ -534,7 +534,7 @@ export async function joinRoom(
     return { errors: { form: "Failed to join room. Please try again." } };
   }
 
-  redirect(`/room/${roomId}/lobby`);
+  redirect(`/room/${roomId}/lobby`, RedirectType.replace);
 }
 
 // ─── startDraw / startRoom ────────────────────────────────────────────────────
@@ -619,12 +619,12 @@ export async function startDraw(
       .eq("id", roomId) as { error: unknown };
 
     if (statusError) return { error: "Failed to start the room. Please try again." };
-    redirect(`/room/${roomId}/group-stage`);
+    redirect(`/room/${roomId}/group-stage`, RedirectType.replace);
   }
 
   // 3. Idempotency: if assignments already exist, draw already ran → skip to page
   const alreadyDrawn = players.some((p) => p.assigned_country !== null);
-  if (alreadyDrawn) redirect(`/room/${roomId}/draw`);
+  if (alreadyDrawn) redirect(`/room/${roomId}/draw`, RedirectType.replace);
 
   // 4. Run secure Fisher-Yates shuffle + assign countries
   const assignments = assignCountries(players, countryCodes);
@@ -652,7 +652,7 @@ export async function startDraw(
 
   if (statusError) return { error: "Failed to finalise the draw. Please try again." };
 
-  redirect(`/room/${roomId}/draw`);
+  redirect(`/room/${roomId}/draw`, RedirectType.replace);
 }
 
 // ─── startGroupStage ──────────────────────────────────────────────────────────
@@ -693,7 +693,7 @@ export async function startGroupStage(
     if (!player) return { error: "Only players in this room can enter group stage." };
   }
 
-  if (room.status === "group_stage") redirect(`/room/${roomId}/group-stage`);
+  if (room.status === "group_stage") redirect(`/room/${roomId}/group-stage`, RedirectType.replace);
   if (room.status !== "drawn") return { error: "Room is not in the drawn state." };
 
   const { error: updateError } = await (admin as any)
@@ -703,7 +703,7 @@ export async function startGroupStage(
 
   if (updateError) return { error: "Failed to start group stage. Please try again." };
 
-  redirect(`/room/${roomId}/group-stage`);
+  redirect(`/room/${roomId}/group-stage`, RedirectType.replace);
 }
 
 // ─── buildKnockout ────────────────────────────────────────────────────────────

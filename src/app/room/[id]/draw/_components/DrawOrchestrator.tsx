@@ -45,7 +45,7 @@ export function DrawOrchestrator({
   useEffect(() => {
     const unsubscribe = subscribeRoomUpdates(roomId, (updated) => {
       if (updated.status === "group_stage") {
-        router.push(`/room/${roomId}/group-stage`);
+        router.replace(`/room/${roomId}/group-stage`);
       }
     });
     return unsubscribe;

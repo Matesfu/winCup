@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect, notFound, RedirectType } from "next/navigation";
 import { createSessionClient, createAdminClient } from "@/lib/supabase/server";
 import { LobbyRealtime } from "./_components/LobbyRealtime";
 import type { RoomPublic, Player } from "@/lib/types/database";
@@ -62,10 +62,10 @@ export default async function LobbyPage({ params }: PageProps) {
   if (!room) notFound();
 
   // If game moved past lobby, redirect to the appropriate phase page
-  if (room.status === "drawn") redirect(`/room/${roomId}/draw`);
-  if (room.status === "group_stage") redirect(`/room/${roomId}/group-stage`);
-  if (room.status === "knockout") redirect(`/room/${roomId}/ladder`);
-  if (room.status === "finished") redirect(`/room/${roomId}/winner`);
+  if (room.status === "drawn") redirect(`/room/${roomId}/draw`, RedirectType.replace);
+  if (room.status === "group_stage") redirect(`/room/${roomId}/group-stage`, RedirectType.replace);
+  if (room.status === "knockout") redirect(`/room/${roomId}/ladder`, RedirectType.replace);
+  if (room.status === "finished") redirect(`/room/${roomId}/winner`, RedirectType.replace);
 
   const players = playersResult.data ?? [];
   const countries = countriesResult.data ?? [];

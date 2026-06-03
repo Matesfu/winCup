@@ -1,10 +1,21 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect, notFound, RedirectType } from "next/navigation";
 import { createSessionClient, createAdminClient } from "@/lib/supabase/server";
 import { DrawOrchestrator } from "./_components/DrawOrchestrator";
 import type { RoomPublic, Player } from "@/lib/types/database";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+interface SupabaseQuery<TResult> extends PromiseLike<TResult> {
+  select(columns: string): SupabaseQuery<TResult>;
+  eq(column: string, value: string): SupabaseQuery<TResult>;
+  order(column: string, options: { ascending: boolean }): SupabaseQuery<TResult>;
+  maybeSingle(): Promise<TResult>;
+}
+
+interface SupabaseReader {
+  from<TResult>(table: string): SupabaseQuery<TResult>;
 }
 
 export const metadata = {
@@ -26,44 +37,46 @@ export default async function DrawPage({ params }: PageProps) {
   // consistent with the fix applied to the lobby and join pages.
   // countries is publicly readable, so session client is fine there.
   const admin = createAdminClient();
+  const sessionDb = supabase as unknown as SupabaseReader;
+  const adminDb = admin as unknown as SupabaseReader;
 
   // Parallel fetches for initial render
   const [roomResult, playersResult, countriesResult] = await Promise.all([
-    (supabase as any)
-      .from("rooms")
-      .select("id,code,status,win_rule,stake_amount")
-      .eq("id", roomId)
-      .maybeSingle() as Promise<{
+    sessionDb
+      .from<{
         data: Pick<
           RoomPublic,
           "id" | "code" | "status" | "win_rule" | "stake_amount"
         > | null;
-      }>,
-    (admin as any)
-      .from("players")
-      .select("id,name,avatar_emoji,assigned_country,user_id")
-      .eq("room_id", roomId)
-      .order("joined_at", { ascending: true }) as Promise<{
+      }>("rooms")
+      .select("id,code,status,win_rule,stake_amount")
+      .eq("id", roomId)
+      .maybeSingle(),
+    adminDb
+      .from<{
         data: Pick<
           Player,
           "id" | "name" | "avatar_emoji" | "assigned_country" | "user_id"
         >[] | null;
-      }>,
-    (supabase as any)
-      .from("countries")
-      .select("code,name,flag_emoji") as Promise<{
+      }>("players")
+      .select("id,name,avatar_emoji,assigned_country,user_id")
+      .eq("room_id", roomId)
+      .order("joined_at", { ascending: true }),
+    sessionDb
+      .from<{
         data: { code: string; name: string; flag_emoji: string }[] | null;
-      }>,
+      }>("countries")
+      .select("code,name,flag_emoji"),
   ]);
 
   const room = roomResult.data;
   if (!room) notFound();
 
   // Status guard: redirect to the correct phase
-  if (room.status === "lobby") redirect(`/room/${roomId}/lobby`);
-  if (room.status === "group_stage") redirect(`/room/${roomId}/group-stage`);
-  if (room.status === "knockout") redirect(`/room/${roomId}/ladder`);
-  if (room.status === "finished") redirect(`/room/${roomId}/winner`);
+  if (room.status === "lobby") redirect(`/room/${roomId}/lobby`, RedirectType.replace);
+  if (room.status === "group_stage") redirect(`/room/${roomId}/group-stage`, RedirectType.replace);
+  if (room.status === "knockout") redirect(`/room/${roomId}/ladder`, RedirectType.replace);
+  if (room.status === "finished") redirect(`/room/${roomId}/winner`, RedirectType.replace);
   // status === 'drawn' → stay here
 
   const players = playersResult.data ?? [];

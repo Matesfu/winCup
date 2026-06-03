@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect, notFound, RedirectType } from "next/navigation";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { createSessionClient, createAdminClient } from "@/lib/supabase/server";
@@ -82,7 +82,7 @@ export default async function JoinRoomPage({ params }: PageProps) {
   if (!room) notFound();
 
   // If game has already started, send to the lobby which will route further
-  if (room.status !== "lobby") redirect(`/room/${roomId}/lobby`);
+  if (room.status !== "lobby") redirect(`/room/${roomId}/lobby`, RedirectType.replace);
 
   const players = playersResult.data ?? [];
   const countries = countriesResult.data ?? [];
@@ -98,13 +98,13 @@ export default async function JoinRoomPage({ params }: PageProps) {
 
   // Already joined — redirect to lobby
   if (players.some((p) => p.user_id === user.id)) {
-    redirect(`/room/${roomId}/lobby`);
+    redirect(`/room/${roomId}/lobby`, RedirectType.replace);
   }
 
   if (room.visibility === "private" && room.host_user_id !== user.id) {
     const cookieStore = await cookies();
     const joinCookie = cookieStore.get(getPrivateRoomJoinCookieName(roomId));
-    if (joinCookie?.value !== room.code) redirect("/room/join");
+    if (joinCookie?.value !== room.code) redirect("/room/join", RedirectType.replace);
   }
 
   // Guard against 0-country edge case: room is only "full" when countries are
