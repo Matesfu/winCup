@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { createSessionClient } from "@/lib/supabase/server";
 import { CreateRoomForm } from "./_components/CreateRoomForm";
+import { HistoryBackButton } from "@/components/ui/HistoryBackButton";
 import type { Profile, Country } from "@/lib/types/database";
 
 export const metadata = {
@@ -46,16 +46,9 @@ export default async function CreateRoomPage() {
     .order("name");
 
   return (
-    <main className="flex flex-1 flex-col items-center py-10 px-4">
+    <main className="relative flex min-h-screen flex-1 flex-col items-center px-4 pb-10 pt-24 sm:pt-28">
+      <HistoryBackButton fallbackHref="/dashboard" />
       <div className="w-full max-w-2xl">
-        {/* Back link */}
-        <Link
-          href="/"
-          className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-white"
-        >
-          ← Back
-        </Link>
-
         <h1 className="mb-8 text-3xl font-extrabold text-white">
           Create a Room
         </h1>
