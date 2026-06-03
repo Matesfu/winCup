@@ -10,20 +10,22 @@ interface StakeInputProps {
 export function StakeInput({ value, onChange, error, disabled }: StakeInputProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-white">
-        Stake amount{" "}
-        <span className="font-normal text-muted">(optional, display only)</span>
+      <label htmlFor="stakeAmountInput" className="text-sm font-medium text-white">
+        Stake amount <span className="font-normal text-gold">(required)</span>
       </label>
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted">£</span>
+        <span className="text-sm text-muted">Birr</span>
         <input
+          id="stakeAmountInput"
           type="number"
-          min="0"
-          step="any"
+          min="0.01"
+          step="0.01"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="e.g. 10"
           disabled={disabled}
+          aria-required="true"
+          aria-invalid={Boolean(error)}
           className={[
             "w-32 rounded-xl border bg-surface px-4 py-3 text-sm text-white placeholder:text-muted",
             "transition-colors duration-200 outline-none",
@@ -39,7 +41,7 @@ export function StakeInput({ value, onChange, error, disabled }: StakeInputProps
       </div>
       {error && <p className="text-xs text-danger">{error}</p>}
       <p className="text-xs text-muted">
-        Display only — WinCup does not handle payments.
+        Players will see this stake on the room card, lobby, and results.
       </p>
     </div>
   );

@@ -9,7 +9,6 @@ const BASE_PROPS = {
   countryFlag: "🇦🇷",
   stakeAmount: 10,
   winMessage: "Champion's owner wins the pot! 🏆",
-  roomCode: "WC-AB23",
 };
 
 describe("WinnerScreen", () => {
@@ -59,13 +58,13 @@ describe("WinnerScreen", () => {
   });
 
   it("shows stake amount when non-null", () => {
-    expect(screen.getByText("£10")).toBeInTheDocument();
+    expect(screen.getByText("10 Birr")).toBeInTheDocument();
   });
 });
 
 describe("WinnerScreen — no stake", () => {
   it("does not show stake section when stakeAmount is null", () => {
     render(<WinnerScreen {...BASE_PROPS} stakeAmount={null} />);
-    expect(screen.queryByText(/£/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Birr/)).not.toBeInTheDocument();
   });
 });

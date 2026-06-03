@@ -541,7 +541,7 @@ export default async function JoinRoomPage({ params }: { params: Promise<{id:str
 ├─────────────────────────────────┤
 │  🏆  Alice's Room               │
 │  Win: Last Team Standing        │
-│  Stake: £10                     │
+│  Stake: 10 Birr                 │
 │  3 of 6 players joined          │
 │                                 │
 │  Countries:                     │

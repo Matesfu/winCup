@@ -7,6 +7,7 @@ export interface LobbyRealtimeCallbacks {
   onPlayerJoined: (player: Player) => void;
   onPlayerRemoved: (playerId: string) => void;
   onRoomUpdated: (room: Partial<RoomPublic>) => void;
+  onRoomDeleted?: () => void;
 }
 
 /**
@@ -16,6 +17,7 @@ export interface LobbyRealtimeCallbacks {
  * Listens for:
  *   - players INSERT  → new player joined the lobby
  *   - rooms UPDATE    → status changed (e.g. 'lobby' → 'drawn')
+ *   - rooms DELETE    → host deleted the waiting room
  *
  * Prerequisites: players and rooms must be in supabase_realtime
  * (see migration 20240103000000_realtime.sql).
@@ -44,6 +46,11 @@ export function subscribeLobby(
       { event: "UPDATE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
       (payload: { new: Record<string, unknown> }) =>
         callbacks.onRoomUpdated(payload.new as unknown as Partial<RoomPublic>)
+    )
+    .on(
+      "postgres_changes" as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      { event: "DELETE", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
+      () => callbacks.onRoomDeleted?.()
     )
     .subscribe();
   return () => { supabase.removeChannel(channel); };

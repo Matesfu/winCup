@@ -10,7 +10,6 @@ interface WinnerScreenProps {
   countryFlag: string;
   stakeAmount: number | null;
   winMessage: string;
-  roomCode: string;
 }
 
 export function WinnerScreen({
@@ -20,9 +19,8 @@ export function WinnerScreen({
   countryFlag,
   stakeAmount,
   winMessage,
-  roomCode,
 }: WinnerScreenProps) {
-  const stakeText = stakeAmount ? ` and took the £${stakeAmount} pot` : "";
+  const stakeText = stakeAmount ? ` and took the ${stakeAmount} Birr pot` : "";
   const shareText = `🏆 I won WinCup! ${countryFlag} ${countryName} took the cup${stakeText}! Play at wincup.app`;
 
   return (
@@ -75,10 +73,7 @@ export function WinnerScreen({
           <div className="animate-slide-up flex flex-col items-center gap-1 rounded-2xl border border-gold/30 bg-gold/5 px-6 py-3">
             <span className="text-xs text-muted">Prize pot</span>
             <span className="text-2xl font-extrabold text-gold tabular-nums">
-              £{stakeAmount}
-            </span>
-            <span className="text-xs text-muted/60">
-              Settle up offline with friends
+              {stakeAmount} Birr
             </span>
           </div>
         )}
@@ -104,10 +99,6 @@ export function WinnerScreen({
           Start New Room →
         </Link>
 
-        {/* Disclaimer */}
-        <p className="max-w-sm text-xs text-muted/50">
-          WinCup is for entertainment only. It does not handle, hold, or process any payments.
-        </p>
       </main>
     </>
   );

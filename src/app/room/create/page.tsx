@@ -8,6 +8,17 @@ export const metadata = {
   title: "Create Room — WinCup",
 };
 
+interface SupabaseQuery<TResult> extends PromiseLike<TResult> {
+  select(columns: string): SupabaseQuery<TResult>;
+  eq(column: string, value: string | boolean): SupabaseQuery<TResult>;
+  order(column: string): SupabaseQuery<TResult>;
+  maybeSingle(): Promise<TResult>;
+}
+
+interface SupabaseReader {
+  from<TResult>(table: string): SupabaseQuery<TResult>;
+}
+
 export default async function CreateRoomPage() {
   // Auth guard — redirect unauthenticated users to sign-in
   const supabase = await createSessionClient();
@@ -16,22 +27,23 @@ export default async function CreateRoomPage() {
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/auth/sign-in?redirectTo=/room/create");
+  const db = supabase as unknown as SupabaseReader;
 
   // Fetch username from profiles (best-effort — falls back to empty string)
-  // Cast needed: @supabase/postgrest-js 2.106.x + TS5.9 generic regression
-  const { data: profile } = await (supabase as any)
-    .from("profiles")
+  const { data: profile } = await db
+    .from<{ data: Pick<Profile, "username"> | null }>("profiles")
     .select("username")
     .eq("id", user.id)
-    .maybeSingle() as { data: Pick<Profile, "username"> | null };
+    .maybeSingle();
 
-  // Fetch all countries — public read, no auth required
-  const { data: countries } = await (supabase as any)
-    .from("countries")
-    .select("code, name, flag_emoji, is_knocked_out")
-    .order("name") as {
+  // Fetch selectable countries only — knocked-out countries are hidden from room creation
+  const { data: countries } = await db
+    .from<{
       data: Pick<Country, "code" | "name" | "flag_emoji" | "is_knocked_out">[] | null;
-    };
+    }>("countries")
+    .select("code, name, flag_emoji, is_knocked_out")
+    .eq("is_knocked_out", false)
+    .order("name");
 
   return (
     <main className="flex flex-1 flex-col items-center py-10 px-4">

@@ -138,7 +138,7 @@ export default async function JoinRoomPage({ params }: PageProps) {
             <span>
               {room.win_rule === "strict" ? "Must Win the Cup" : "Last Team Standing"}
             </span>
-            {room.stake_amount !== null && <span>Stake: £{room.stake_amount}</span>}
+            {room.stake_amount !== null && <span>Stake: {room.stake_amount} Birr</span>}
             <span className={isFull ? "text-danger" : ""}>
               {players.length} / {availableCountryCount} players joined
               {isFull && " (FULL)"}

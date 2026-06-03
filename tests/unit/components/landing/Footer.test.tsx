@@ -7,16 +7,13 @@ describe("Footer", () => {
     render(<Footer />);
   });
 
-  it("renders the entertainment-only disclaimer", () => {
-    expect(screen.getByText(/entertainment only/i)).toBeInTheDocument();
+  it("summarizes the room experience", () => {
+    expect(screen.getByText(/Create public or private World Cup rooms/i)).toBeInTheDocument();
   });
 
-  it("states it does not handle payments", () => {
-    expect(screen.getByText(/does not handle.*payments/i)).toBeInTheDocument();
-  });
-
-  it("includes an 18+ note", () => {
-    expect(screen.getByText(/18\+/i)).toBeInTheDocument();
+  it("does not show the old unsupported-payment disclaimer", () => {
+    expect(screen.queryByText(/does not handle.*payments/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/wagering/i)).not.toBeInTheDocument();
   });
 
   it("renders the WinCup copyright line", () => {
@@ -25,9 +22,8 @@ describe("Footer", () => {
     expect(elements.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("disclaimer is visible (not aria-hidden)", () => {
-    const disclaimer = screen.getByText(/entertainment only/i);
-    // Should not have aria-hidden="true" on itself or a direct parent
-    expect(disclaimer.closest('[aria-hidden="true"]')).toBeNull();
+  it("summary is visible (not aria-hidden)", () => {
+    const summary = screen.getByText(/Create public or private World Cup rooms/i);
+    expect(summary.closest('[aria-hidden="true"]')).toBeNull();
   });
 });

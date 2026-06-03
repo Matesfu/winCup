@@ -105,9 +105,6 @@ export function DrawSummary({ roomId, players, countriesMap }: DrawSummaryProps)
         </Button>
       </form>
 
-      <p className="max-w-sm text-center text-xs text-muted/60">
-        WinCup is for entertainment only. It does not handle, hold, or process any payments.
-      </p>
     </div>
   );
 }

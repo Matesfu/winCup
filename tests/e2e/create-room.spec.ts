@@ -38,7 +38,7 @@ test.describe("Create Room page", () => {
     await expect(page.getByText("3. Assignment Mode")).toBeVisible();
     await expect(page.getByText("4. Win Rule")).toBeVisible();
     await expect(page.getByText("5. Pick Countries")).toBeVisible();
-    await expect(page.getByText("6. Stake (Optional)")).toBeVisible();
+    await expect(page.getByText("6. Stake")).toBeVisible();
   });
 
   test("Create Room button is disabled with fewer than 2 countries", async ({ page }) => {
@@ -51,6 +51,7 @@ test.describe("Create Room page", () => {
   test("Create Room button enables after selecting 2 countries", async ({ page }) => {
     await signIn(page);
     const cards = page.locator('[data-testid^="country-card-"]');
+    await page.getByLabel(/stake amount/i).fill("10");
     await cards.nth(0).click();
     await cards.nth(1).click();
     await expect(page.getByTestId("create-room-submit")).not.toBeDisabled();

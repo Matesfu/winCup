@@ -508,7 +508,7 @@ function RoomCard({ room }: { room: DashboardRoom }) {
           <span>👥 {room.playerCount}/{room.countryCount} players</span>
           <span>{formatAssignmentMode(room.assignment_mode)}</span>
           <span>{room.win_rule === "strict" ? "🏆 Must Win" : "⚔️ Last Standing"}</span>
-          {room.stake_amount !== null && <span>💰 £{room.stake_amount}</span>}
+          {room.stake_amount !== null && <span>💰 {room.stake_amount} Birr</span>}
           <span>Created {createdLabel}</span>
         </div>
 

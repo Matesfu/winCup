@@ -288,7 +288,7 @@ interface WinnerScreenProps {
 ║   "Champion's owner wins the pot! 🏆"            ║
 ║                                                  ║
 ║   ───── Stake ─────────────────────────────────  ║
-║   £{amount}  (Settle up offline)                 ║
+║   {amount} Birr                                  ║
 ║                                                  ║
 ║   [📲 Share to WhatsApp]                         ║
 ║                                                  ║
@@ -301,7 +301,7 @@ interface WinnerScreenProps {
 ```
 🏆 I won WinCup! {flag} {country} took the cup{stake_text}!
 ```
-Where `stake_text = ` and took the £{amount} pot`` if stake is set, or empty string.
+Where `stake_text = ` and took the {amount} Birr pot`` if stake is set, or empty string.
 
 For `last_standing` without a champion (edge case): `"🏆 I won WinCup — last team standing! {flag} {country}!"`
 
@@ -468,8 +468,8 @@ Each particle uses inline `style={{ animationDuration: '...',  animationDelay: '
 | WhatsApp button has correct href pattern | href contains `wa.me` |
 | WhatsApp text includes player name | Encoded text in href |
 | Renders "Start New Room" link | Link with `/room/create` href |
-| Stake amount shown when non-null | £X visible |
-| Stake section hidden when null | £ not present |
+| Stake amount shown when non-null | X Birr visible |
+| Stake section hidden when null | Birr not present |
 
 ---
 

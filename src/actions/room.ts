@@ -199,9 +199,8 @@ export async function createRoom(
     };
   }
 
-  // 7. Parse stake amount
-  const stakeAmount =
-    stakeAmountRaw.trim() !== "" ? Number(stakeAmountRaw) : null;
+  // 7. Parse required stake amount
+  const stakeAmount = Number(stakeAmountRaw);
 
   // 8. Insert room
   const { data: room, error: roomError } = await (admin as any)
@@ -324,6 +323,51 @@ export async function kickPlayer(
   if (deleteError) return { error: "Failed to remove player. Please try again." };
 
   return null; // success
+}
+
+// ─── deleteRoom ───────────────────────────────────────────────────────────────
+
+export type DeleteRoomState = { error?: string } | null;
+
+/**
+ * Host-only: delete a room while it is still waiting in the lobby.
+ * Once the room has started, deletion is blocked to preserve the game record.
+ */
+export async function deleteRoom(
+  prevState: DeleteRoomState,
+  formData: FormData
+): Promise<DeleteRoomState> {
+  const roomId = (formData.get("roomId") as string) ?? "";
+  if (!roomId) return { error: "Room id is missing." };
+
+  const supabase = await createSessionClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not authenticated." };
+
+  const admin = createAdminClient();
+
+  const { data: room } = await (admin as any)
+    .from("rooms")
+    .select("id, status, host_user_id")
+    .eq("id", roomId)
+    .maybeSingle() as {
+      data: Pick<RoomPublic, "id" | "status" | "host_user_id"> | null;
+    };
+
+  if (!room) return { error: "Room not found." };
+  if (room.host_user_id !== user.id) return { error: "Only the host can delete this room." };
+  if (room.status !== "lobby") {
+    return { error: "This room has already started and cannot be deleted." };
+  }
+
+  const { error: deleteError } = await (admin as any)
+    .from("rooms")
+    .delete()
+    .eq("id", roomId) as { error: unknown };
+
+  if (deleteError) return { error: "Failed to delete room. Please try again." };
+
+  redirect("/dashboard", RedirectType.replace);
 }
 
 // ─── lookupRoomByCode ─────────────────────────────────────────────────────────

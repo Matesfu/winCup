@@ -9,6 +9,7 @@ import { PlayerCard } from "./PlayerCard";
 import { KickPlayerButton } from "./KickPlayerButton";
 import { LobbyProgress } from "./LobbyProgress";
 import { StartDrawButton } from "./StartDrawButton";
+import { DeleteRoomButton } from "./DeleteRoomButton";
 import { subscribeLobby } from "@/lib/supabase/realtime";
 import type { Player, RoomPublic } from "@/lib/types/database";
 
@@ -126,7 +127,12 @@ export function LobbyRealtime({
 
     if (signal?.aborted) return;
 
-    if (response.status === 403 || response.status === 404) {
+    if (response.status === 404) {
+      router.replace("/dashboard");
+      return;
+    }
+
+    if (response.status === 403) {
       router.push("/room/join");
       return;
     }
@@ -186,6 +192,9 @@ export function LobbyRealtime({
           redirectForStatus(updated.status as RoomPublic["status"]);
         }
       },
+      onRoomDeleted() {
+        router.replace("/dashboard");
+      },
     });
 
     return unsubscribe;
@@ -233,7 +242,7 @@ export function LobbyRealtime({
             {room.win_rule === "strict" ? "Must Win the Cup" : "Last Team Standing"}
           </span>
           {room.stake_amount !== null && (
-            <span>Stake: £{room.stake_amount}</span>
+            <span>Stake: {room.stake_amount} Birr</span>
           )}
         </div>
 
@@ -307,12 +316,15 @@ export function LobbyRealtime({
 
         {/* Host CTA / Non-host waiting */}
         {isHost ? (
-          <StartDrawButton
-            roomId={roomId}
-            isReady={isReady}
-            assignmentMode={assignmentMode}
-            waitingMessage={waitingMessage}
-          />
+          <div className="flex w-full flex-col items-center gap-4">
+            <StartDrawButton
+              roomId={roomId}
+              isReady={isReady}
+              assignmentMode={assignmentMode}
+              waitingMessage={waitingMessage}
+            />
+            <DeleteRoomButton roomId={roomId} roomName={room.room_name} />
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-1 py-2" data-testid="waiting-message">
             <p className="animate-pulse text-sm text-muted">
