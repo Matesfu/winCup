@@ -22,6 +22,8 @@ module.exports = {
     "^server-only$": "<rootDir>/tests/__mocks__/server-only.ts",
     // Stub next/headers
     "^next/headers$": "<rootDir>/tests/__mocks__/next-headers.ts",
+    // Stub next/cache
+    "^next/cache$": "<rootDir>/tests/__mocks__/next-cache.ts",
     // Stub next/font
     "^next/font/(.*)$": "<rootDir>/tests/__mocks__/next-font.ts",
     // Stub next/navigation

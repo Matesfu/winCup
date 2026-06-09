@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
-import { createSessionClient } from "@/lib/supabase/server";
+import { createAdminClient, createSessionClient } from "@/lib/supabase/server";
 import { HistoryBackButton } from "@/components/ui/HistoryBackButton";
-import type { RoomPublic } from "@/lib/types/database";
+import { RoomChatLauncher } from "./_components/RoomChatLauncher";
+import type { Player, RoomPublic } from "@/lib/types/database";
 
 interface RoomLayoutProps {
   params: Promise<{ id: string }>;
@@ -28,15 +29,29 @@ export default async function RoomLayout({ params, children }: RoomLayoutProps) 
     return <div className="flex min-h-full flex-col">{children}</div>;
   }
 
-  // Lightweight fetch for the header — 3 columns only
+  // Lightweight fetch for the header and room-scoped chat access.
   const db = supabase as unknown as SupabaseReader;
-  const { data: room } = await db
-    .from<{ data: Pick<RoomPublic, "code" | "host_name" | "status"> | null }>("rooms")
-    .select("code, host_name, status")
-    .eq("id", id)
-    .maybeSingle();
+  const admin = createAdminClient() as unknown as SupabaseReader;
+  const [roomResult, playerResult] = await Promise.all([
+    db
+      .from<{
+        data: Pick<RoomPublic, "code" | "host_name" | "host_user_id" | "status"> | null;
+      }>("rooms")
+      .select("code, host_name, host_user_id, status")
+      .eq("id", id)
+      .maybeSingle(),
+    admin
+      .from<{ data: Pick<Player, "id"> | null }>("players")
+      .select("id")
+      .eq("room_id", id)
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
+
+  const room = roomResult.data;
 
   if (!room) notFound();
+  const canChat = room.host_user_id === user.id || Boolean(playerResult.data);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -62,6 +77,7 @@ export default async function RoomLayout({ params, children }: RoomLayoutProps) 
 
       {/* Page content */}
       <div className="flex flex-1 flex-col">{children}</div>
+      {canChat && <RoomChatLauncher roomId={id} currentUserId={user.id} />}
     </div>
   );
 }

@@ -1,5 +1,13 @@
 import { createClient } from "@/lib/supabase/client";
-import type { Player, RoomPublic, RoomCountry, RoomTeam, Match, Country } from "@/lib/types/database";
+import type {
+  Player,
+  RoomPublic,
+  RoomCountry,
+  RoomTeam,
+  Match,
+  Country,
+  RoomMessage,
+} from "@/lib/types/database";
 
 // ─── subscribeLobby ───────────────────────────────────────────────────────────
 
@@ -171,5 +179,52 @@ export function subscribeLadder(
         callbacks.onRoomStatusUpdated(payload.new as unknown as Partial<RoomPublic>)
     )
     .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+// ─── subscribeRoomMessages ───────────────────────────────────────────────────
+
+export interface RoomMessageCallbacks {
+  onInserted: (message: RoomMessage) => void;
+  onUpdated: (message: Partial<RoomMessage>) => void;
+  onDeleted: (messageId: string) => void;
+}
+
+/**
+ * Subscribe to room-scoped chat messages.
+ * Uses one filtered channel and listens to all row changes because updates and
+ * deletes are rare, while keeping the implementation accurate for every client.
+ */
+export function subscribeRoomMessages(
+  roomId: string,
+  callbacks: RoomMessageCallbacks
+): () => void {
+  const supabase = createClient();
+
+  const channel = supabase
+    .channel(`room-chat:${roomId}`)
+    .on(
+      "postgres_changes" as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+      { event: "*", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` },
+      (payload: {
+        eventType: "INSERT" | "UPDATE" | "DELETE";
+        new: Record<string, unknown>;
+        old: Record<string, unknown>;
+      }) => {
+        if (payload.eventType === "INSERT") {
+          callbacks.onInserted(payload.new as unknown as RoomMessage);
+          return;
+        }
+
+        if (payload.eventType === "UPDATE") {
+          callbacks.onUpdated(payload.new as unknown as Partial<RoomMessage>);
+          return;
+        }
+
+        callbacks.onDeleted((payload.old as { id: string }).id);
+      }
+    )
+    .subscribe();
+
   return () => { supabase.removeChannel(channel); };
 }
