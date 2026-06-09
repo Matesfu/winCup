@@ -122,17 +122,28 @@ export function LobbyRealtime({
 
     const response = await fetch(`/api/rooms/${roomId}/lobby-state`, {
       cache: "no-store",
+      credentials: "same-origin",
       signal,
     });
 
     if (signal?.aborted) return;
 
+    if (response.status === 401) {
+      hasRedirectedRef.current = true;
+      router.replace(
+        `/auth/sign-in?redirectTo=${encodeURIComponent(`/room/${roomId}/lobby`)}`
+      );
+      return;
+    }
+
     if (response.status === 404) {
+      hasRedirectedRef.current = true;
       router.replace("/dashboard");
       return;
     }
 
     if (response.status === 403) {
+      hasRedirectedRef.current = true;
       router.push("/room/join");
       return;
     }

@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect, RedirectType } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createSessionClient, createAdminClient } from "@/lib/supabase/server";
 import { generateRoomCode } from "@/lib/room-code";
@@ -578,6 +579,7 @@ export async function joinRoom(
     return { errors: { form: "Failed to join room. Please try again." } };
   }
 
+  revalidatePath(`/room/${roomId}`, "layout");
   redirect(`/room/${roomId}/lobby`, RedirectType.replace);
 }
 

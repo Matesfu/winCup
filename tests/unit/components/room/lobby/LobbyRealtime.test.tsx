@@ -115,4 +115,29 @@ describe("LobbyRealtime", () => {
     expect(replace).toHaveBeenCalledWith("/room/room-1/draw");
     expect(push).not.toHaveBeenCalledWith("/room/room-1/draw");
   });
+
+  it("redirects to sign-in when the lobby state API returns 401", async () => {
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: "Not authenticated." }),
+    }) as jest.Mock;
+
+    render(
+      <LobbyRealtime
+        roomId="room-1"
+        initialRoom={ROOM}
+        initialPlayers={PLAYERS}
+        initialCountries={COUNTRIES}
+        currentUserId="host-1"
+        isHost
+      />
+    );
+
+    await waitFor(() =>
+      expect(replace).toHaveBeenCalledWith(
+        "/auth/sign-in?redirectTo=%2Froom%2Froom-1%2Flobby"
+      )
+    );
+  });
 });

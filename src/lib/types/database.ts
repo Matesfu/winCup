@@ -113,6 +113,18 @@ export interface Match {
   match_order: number | null;
 }
 
+export interface RoomMessage {
+  id: string;
+  room_id: string;
+  sender_user_id: string | null;
+  sender_player_id: string | null;
+  sender_name: string;
+  sender_avatar_emoji: string | null;
+  body: string;
+  created_at: string;
+  deleted_at: string | null;
+}
+
 // ─── Insert types (subset of fields required for INSERT) ────────────────────
 
 export type CountryInsert = Omit<Country, "external_team_id" | "is_knocked_out"> & {
@@ -136,6 +148,13 @@ export type RoomCountryInsert = Omit<RoomCountry, "id">;
 export type RoomTeamInsert = Omit<RoomTeam, "id">;
 
 export type MatchInsert = Omit<Match, "id">;
+
+export type RoomMessageInsert = Omit<
+  RoomMessage,
+  "id" | "created_at" | "deleted_at"
+> & {
+  deleted_at?: string | null;
+};
 
 // ─── Supabase Database generic (used by createClient<Database>) ─────────────
 
@@ -182,6 +201,12 @@ export interface Database {
         Row: Match;
         Insert: MatchInsert;
         Update: Partial<Match>;
+        Relationships: never[];
+      };
+      room_messages: {
+        Row: RoomMessage;
+        Insert: RoomMessageInsert;
+        Update: Partial<RoomMessage>;
         Relationships: never[];
       };
     };
